@@ -3,7 +3,11 @@
 # date: 23/02/2023
 
 import numpy as np
-import torch
+from keras.layers import LSTM, Dense, Dropout
+from keras.models import Sequential
+from keras.optimizers import Adam
+from keras.regularizers import L1L2
+
 
 class baselineAgent:
 
@@ -12,7 +16,6 @@ class baselineAgent:
         self.record_length = record_length
         self.moving_avg = 0
         self.model = None
-        print("in baselineAgent __init__")
 
 
     def get_action(self, state):
@@ -42,55 +45,61 @@ class baselineAgent:
 
     def clear_records(self):
         self.records = None
-        
-        
-        
-class LSTMAgent:
-    def __init__(self, model, input_size, record_length=10):
-        self.model = model
-        self.records = None
+
+
+class LSTM_RNN_Agent:
+    def __init__(self, record_length=10, input_dim=1, hidden_dim=32,
+                 learning_rate=0.001, n_lstm_layers=1, dropout_rate=0.0,
+                 l1_reg=0.0, l2_reg=0.0):
+        self.records = [[] for _ in range(input_dim)]  # Initialize as an empty list of lists
         self.record_length = record_length
-        self.input_size = input_size
+        self.moving_avg = 0
+        self.model = self.build_model(input_dim, hidden_dim, learning_rate,
+                                      n_lstm_layers, dropout_rate, l1_reg,
+                                      l2_reg)
 
-    def preprocess_data(self, records, input_size):
-        # Convert the records into a NumPy array
-        data = np.array(records)
-        print("Data shape:", data.shape)
-        print("input size:", input_size)
-        # Normalize or scale the data if necessary
-        data_normalized = data / np.max(np.abs(data), axis=0)
+    def build_model(self, input_dim, hidden_dim, learning_rate, n_lstm_layers,
+                    dropout_rate, l1_reg, l2_reg):
+        model = Sequential()
+        for i in range(n_lstm_layers):
+            if i == 0:
+                model.add(LSTM(hidden_dim,
+                               input_shape=(self.record_length, input_dim),
+                               return_sequences=True if n_lstm_layers > 1 else False))
+            else:
+                model.add(LSTM(hidden_dim,
+                               return_sequences=True if i < n_lstm_layers - 1 else False))
+            if dropout_rate > 0:
+                model.add(Dropout(dropout_rate))
 
-        # Reshape the data to match the input shape expected by the LSTM model
-        seq_length = data_normalized.shape[0]
-        input_data = np.zeros((seq_length, 1, input_size))
-        input_data[:, 0, :] = data_normalized[:, :]
-
-        return input_data
+        model.add(Dense(input_dim, activation='softmax',
+                        kernel_regularizer=L1L2(l1=l1_reg, l2=l2_reg)))
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=Adam(learning_rate=learning_rate))
+        return model
 
     def get_action(self, state):
         self.add_record(state)
-
-        input_data = self.preprocess_data(self.records, self.input_size)
-        input_tensor = torch.tensor(input_data, dtype=torch.float32)
-
-        print("Input tensor shape:", input_tensor.shape)
-
-        output = self.model(input_tensor)
-
-        # Get the index of the maximum score as the action
-        action_index = np.argmax(output.detach().numpy())
-        return action_index
+        input_data = np.array(self.records).T.reshape(-1, self.record_length, 1)
+        action = self.model.predict(input_data)
+        return action.flatten()
 
     def add_record(self, state):
-        # init records w.r.t. the size of states
-        if self.records is None:
+        if not self.records or not self.records[0]:  # Check for empty list of lists
             self.records = [[] for _ in range(len(state))]
-        # insert records
         for r, s in zip(self.records, state):
             r.append(s)
-            # discard oldest records
             if len(r) > self.record_length:
                 r.pop(0)
 
     def clear_records(self):
-        self.records = None
+        self.records = [[] for _ in range(len(self.records))]  # Clear records while maintaining the structure
+
+    def train_on_batch(self, X, y):
+        loss = self.model.train_on_batch(X, y)
+        # Calculate accuracy
+        y_pred = self.model.predict(X)
+        accuracy = np.mean(np.argmax(y_pred, axis=-1) == np.argmax(y, axis=-1))
+        return loss, accuracy
+
+

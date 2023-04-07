@@ -45,30 +45,21 @@ class ROFARS_v1:
         return np.mean(self.rewards).round(3)
 
     def step(self, action):
-        # adding small noise to the action for randomness when all values are the same
-        action += np.random.rand(*action.shape)/100
-        # action is a vector of scores with n_camera-dimension
-        # -1 refers to the unchecked camera state
-        state = np.ones(self.n_camera)*(-1)
-        # get the index of cameras for check according to the budget
-        check_index = np.argsort(action)[::-1][:int(self.budget_ratio * self.n_camera)]
-        for i in check_index:
-            state[i] = self.cameras[i]['count'][self.index]
+        action += np.random.rand(*action.shape) / 100
+        state = np.ones(self.n_camera) * (-1)
+        check_index = np.argsort(action)[::-1][
+                      :int(self.budget_ratio * self.n_camera)]
+        state[check_index] = np.array(
+            [self.cameras[i]['count'][self.index] for i in check_index])
 
-        # collect number of total faces as the reward
-        reward = state[state != -1].sum()/self.n_camera
+        reward = np.sum(state[state != -1]) / self.n_camera
         self.rewards.append(reward)
 
-        # check if stop
-        if self.index == self.length-1:
-            stop = True
-        else:
-            stop = False
-
-        # step
+        stop = self.index == self.length - 1
         self.index += 1
 
         return reward, state, stop
+
 
 if __name__ == "__main__":
     env = ROFARS_v1()
