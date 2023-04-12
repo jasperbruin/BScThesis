@@ -130,3 +130,51 @@ class UCBAgent:
     def update(self, action, reward):
         self.counts[action] += 1
         self.values[action] += (reward - self.values[action]) / self.counts[action]
+
+class SimpleRNNAgent:
+
+    def __init__(self, record_length=10):
+        self.records = None
+        self.record_length = record_length
+        self.moving_avg = 0
+        self.model = None
+
+
+    def get_action(self, state):
+        # add to record
+        self.add_record(state)
+
+        # Impute missing values
+        imputed_state = self.impute_missing_values(state)
+
+        # random action
+        #action = np.random.rand(len(state))
+
+        # sum of historical records as scores (-1 is taken as 1 to encourage exploration)
+        action = np.array([np.sum(np.abs(r)) for r in self.records])
+
+        # normalization as the final step
+        action = action/action.sum()
+        return action
+
+    def add_record(self, state):
+        # init records w.r.t. the size of states
+        if self.records is None:
+            self.records = [[] for _ in range(len(state))]
+        # insert records
+        for r, s in zip(self.records, state):
+            r.append(s)
+            # discard oldest records
+            if len(r) > self.record_length:
+                r.pop(0)
+
+    def clear_records(self):
+        self.records = None
+
+    def impute_missing_values(self, state):
+        """Impute missing values in the state with the mean of historical records"""
+        imputed_state = np.copy(state)
+        for i, s in enumerate(state):
+            if s == -1:
+                imputed_state[i] = np.mean(self.records[i])
+        return imputed_state
