@@ -1,34 +1,30 @@
-# main script for 'Resource Optimization for Facial Recognition Systems (ROFARS)' project
-# author: Cyril Hsu @ UvA-MNS
-# date: 23/02/2023
-
 import numpy as np
 from tqdm import tqdm
-from agents import baselineAgent
 from rofarsEnv import ROFARS_v1
-
+from agents import UCBAgent
 
 np.random.seed(0)
 
 env = ROFARS_v1()
-agent = baselineAgent(36*10)
+agent = UCBAgent(c=2)
 n_episode = 30
+
+# Initialize the UCB Agent
+agent.initialize(env.n_camera)
 
 # training
 for episode in range(n_episode):
 
     env.reset(mode='train')
-    agent.clear_records()
-    # give random scores as the initial action
-    init_action = np.random.rand(env.n_camera)
-    reward, state, stop = env.step(init_action)
 
     for t in tqdm(range(env.length), initial=2):
 
-        action = agent.get_action(state)
+        action = np.zeros(env.n_camera)
+        action[agent.get_action()] = 1
         reward, state, stop = env.step(action)
 
-        # do sth to update your algorithm here
+        # Update the UCB Agent
+        agent.update(agent.get_action(), reward)
 
         if stop:
             break
@@ -38,14 +34,11 @@ for episode in range(n_episode):
 
 # testing
 env.reset(mode='test')
-agent.clear_records()
-# give random scores as the initial action
-init_action = np.random.rand(env.n_camera)
-reward, state, stop = env.step(init_action)
 
 for t in tqdm(range(env.length), initial=2):
 
-    action = agent.get_action(state)
+    action = np.zeros(env.n_camera)
+    action[agent.get_action()] = 1
     reward, state, stop = env.step(action)
 
     if stop:

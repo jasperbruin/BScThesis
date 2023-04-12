@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="78dc7e8a-53a9-4ee3-971f-d1b2e0d74547" name="uva">
+        <fileTransfer accessType="SFTP" host="fs0.das5.cs.vu.nl" port="22" sshConfigId="7929d26b-3d55-4f4d-a515-d29c33f4f360" sshConfig="dpp2210@fs0.das5.cs.vu.nl:22 agent" authAgent="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" isUseRsync="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

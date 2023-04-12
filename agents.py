@@ -2,11 +2,12 @@
 # author: Cyril Hsu @ UvA-MNS
 # date: 23/02/2023
 
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dropout, Dense
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.regularizers import L1L2
 import numpy as np
-from keras.layers import LSTM, Dense, Dropout
-from keras.models import Sequential
-from keras.optimizers import Adam
-from keras.regularizers import L1L2
 
 
 class baselineAgent:
@@ -60,23 +61,24 @@ class LSTM_RNN_Agent:
 
     def build_model(self, input_dim, hidden_dim, learning_rate, n_lstm_layers,
                     dropout_rate, l1_reg, l2_reg):
-        model = Sequential()
-        for i in range(n_lstm_layers):
-            if i == 0:
-                model.add(LSTM(hidden_dim,
-                               input_shape=(self.record_length, input_dim),
-                               return_sequences=True if n_lstm_layers > 1 else False))
-            else:
-                model.add(LSTM(hidden_dim,
-                               return_sequences=True if i < n_lstm_layers - 1 else False))
-            if dropout_rate > 0:
-                model.add(Dropout(dropout_rate))
+        with tf.device('/gpu:0'):
+            model = Sequential()
+            for i in range(n_lstm_layers):
+                if i == 0:
+                    model.add(LSTM(hidden_dim,
+                                   input_shape=(self.record_length, input_dim),
+                                   return_sequences=True if n_lstm_layers > 1 else False))
+                else:
+                    model.add(LSTM(hidden_dim,
+                                   return_sequences=True if i < n_lstm_layers - 1 else False))
+                if dropout_rate > 0:
+                    model.add(Dropout(dropout_rate))
 
-        model.add(Dense(input_dim, activation='softmax',
-                        kernel_regularizer=L1L2(l1=l1_reg, l2=l2_reg)))
-        model.compile(loss='categorical_crossentropy',
-                      optimizer=Adam(learning_rate=learning_rate))
-        return model
+            model.add(Dense(input_dim, activation='softmax',
+                            kernel_regularizer=L1L2(l1=l1_reg, l2=l2_reg)))
+            model.compile(loss='categorical_crossentropy',
+                          optimizer=Adam(learning_rate=learning_rate))
+            return model
 
     def get_action(self, state):
         self.add_record(state)
@@ -96,10 +98,35 @@ class LSTM_RNN_Agent:
         self.records = [[] for _ in range(len(self.records))]  # Clear records while maintaining the structure
 
     def train_on_batch(self, X, y):
-        loss = self.model.train_on_batch(X, y)
-        # Calculate accuracy
-        y_pred = self.model.predict(X)
-        accuracy = np.mean(np.argmax(y_pred, axis=-1) == np.argmax(y, axis=-1))
-        return loss, accuracy
+        with tf.device('/gpu:0'):
+            loss, accuracy = self.model.train_on_batch(X, y), None
+            metrics_values = self.model.evaluate(X, y, verbose=0)
+            if isinstance(metrics_values, float):
+                # If metrics_values is a float, set accuracy directly
+                accuracy = metrics_values
+            else:
+                # Otherwise, calculate accuracy from metrics_values
+                accuracy = metrics_values[1]
+            return loss, accuracy
 
+class UCBAgent:
+    def __init__(self, c=2):
+        self.counts = None
+        self.values = None
+        self.c = c
 
+    def initialize(self, n_actions):
+        self.counts = np.zeros(n_actions)
+        self.values = np.zeros(n_actions)
+
+    def get_action(self):
+        if self.counts.min() == 0:
+            action = np.random.choice(np.where(self.counts == 0)[0])
+        else:
+            ucb_values = self.values + self.c * np.sqrt(2 * np.log(self.counts.sum()) / self.counts)
+            action = np.argmax(ucb_values)
+        return action
+
+    def update(self, action, reward):
+        self.counts[action] += 1
+        self.values[action] += (reward - self.values[action]) / self.counts[action]
