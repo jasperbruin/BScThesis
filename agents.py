@@ -182,7 +182,8 @@ class SimpleRNNAgent:
         self.records = None
 
     def impute_missing_values(self, state):
-        """Impute missing values in the state with the mean of historical records"""
+        """ Impute missing values in the state with the mean of historical records.
+            I want to experiment with different missing input strategies."""
         imputed_state = np.copy(state)
         for i, s in enumerate(state):
             if s == -1:
