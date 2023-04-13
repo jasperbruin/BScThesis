@@ -3,6 +3,7 @@ from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
 from agents import UCBAgent
 
+# TODO: Not sure about this is how to do the sliding window implementation
 def sliding_window(data, window_size):
     result = []
     for i in range(len(data) - window_size + 1):
@@ -29,13 +30,11 @@ for episode in range(n_episode):
             traces = sliding_window(state, window_size)
             traces_with_random_scores = [[trace + np.random.rand() for trace in trace_array] for trace_array in traces]
 
-
-            action = np.zeros(env.n_camera)
-            action[agent.get_action()] = 1
+            action = agent.get_action()
             reward, state, stop = env.step(action)
 
             # Update the UCB Agent
-            agent.update(agent.get_action(), reward)
+            agent.update(np.argmax(action), reward)
 
             if stop:
                 break
@@ -52,8 +51,7 @@ for window_size in window_size_range:
         traces = sliding_window(state, window_size)
         traces_with_random_scores = [trace + np.random.rand() for trace in traces]
 
-        action = np.zeros(env.n_camera)
-        action[agent.get_action()] = 1
+        action = agent.get_action()
         reward, state, stop = env.step(action)
 
         if stop:
