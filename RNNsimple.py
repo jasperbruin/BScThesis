@@ -10,7 +10,7 @@ from rofarsEnv import ROFARS_v1
 
 np.random.seed(0)
 env = ROFARS_v1()
-agent = SimpleRNNAgent(36 * 10)
+agent = SimpleRNNAgent(record_length=36*10, n_camera=env.n_camera)
 n_episode = 30
 
 # training

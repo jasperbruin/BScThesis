@@ -24,9 +24,9 @@ np.random.seed(0)
 
 env = ROFARS_v1(length=36*10)
 agent = LSTM_RNN_Agent(
-    hidden_dim=1,
+    hidden_dim=32,
     learning_rate=0.01,
-    n_lstm_layers=2,
+    n_lstm_layers=1,
     dropout_rate=0.5,
     l1_reg=0.001,
     l2_reg=0.001

@@ -54,10 +54,11 @@ class baselineAgent:
 class LSTM_RNN_Agent:
     def __init__(self, record_length=10, input_dim=1, hidden_dim=32,
                  learning_rate=0.001, n_lstm_layers=1, dropout_rate=0.0,
-                 l1_reg=0.0, l2_reg=0.0):
+                 l1_reg=0.0, l2_reg=0.0, epsilon=0.1):
         self.records = [[] for _ in range(input_dim)]  # Initialize as an empty list of lists
         self.record_length = record_length
         self.moving_avg = 0
+        self.epsilon = epsilon
         self.model = self.build_model(input_dim, hidden_dim, learning_rate,
                                       n_lstm_layers, dropout_rate, l1_reg,
                                       l2_reg)
@@ -85,9 +86,17 @@ class LSTM_RNN_Agent:
 
     def get_action(self, state):
         self.add_record(state)
+        imputed_state = self.impute_missing_values(state)
         input_data = np.array(self.records).T.reshape(-1, self.record_length, 1)
-        action = self.model.predict(input_data)
-        return action.flatten()
+
+        # Exploration vs. Exploitation
+        if np.random.rand() < self.epsilon:
+            action = np.random.rand(len(state))
+        else:
+            action = self.model.predict(input_data)
+
+        action = action.flatten() / action.sum()
+        return action
 
     def add_record(self, state):
         if not self.records or not self.records[0]:  # Check for empty list of lists
@@ -112,6 +121,14 @@ class LSTM_RNN_Agent:
                 accuracy = metrics_values[1]
             return loss, accuracy
 
+    def impute_missing_values(self, state):
+        """Impute missing values in the state with the mean of historical records."""
+        imputed_state = np.copy(state)
+        for i, s in enumerate(state):
+            if s == -1:
+                imputed_state[i] = np.mean(self.records[i])
+        return imputed_state
+
 class UCBAgent:
     def __init__(self, c=2):
         self.counts = None
@@ -135,7 +152,6 @@ class UCBAgent:
         self.values[action] += (reward - self.values[action]) / self.counts[action]
 
 class SimpleRNNAgent:
-
     def __init__(self, record_length=10):
         self.records = None
         self.record_length = record_length
@@ -145,8 +161,8 @@ class SimpleRNNAgent:
 
     def build_model(self):
         self.model = Sequential()
-        self.model.add(Masking(mask_value=-1, input_shape=(None, 1)))
-        self.model.add(SimpleRNN(units=4, activation='tanh'))  # Reduced hidden units
+        # Removed Masking layer
+        self.model.add(SimpleRNN(units=4, activation='tanh', input_shape=(None, 1)))  # Reduced hidden units
         self.model.add(Dense(1, activation='linear'))
         self.model.compile(loss='mse', optimizer=Adam(lr=0.001))
 
