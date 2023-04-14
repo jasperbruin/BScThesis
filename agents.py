@@ -13,7 +13,7 @@ from tensorflow.keras.regularizers import L1L2
 from tensorflow.keras.layers import Bidirectional
 import numpy as np
 
-
+# TODO train on clean traces UCB vs Baseline agent
 class LSTM_RNN_Agent:
     def __init__(self, record_length=10, input_dim=1, hidden_dim=32,
                  learning_rate=0.001, n_lstm_layers=1, dropout_rate=0.0,
@@ -166,6 +166,7 @@ class Bidirectional_LSTM_RNN_Agent:
 
     def impute_missing_values(self, state):
         """Impute missing values in the state with the mean of historical records."""
+        # neirest neighbor imputation n avarage
         imputed_state = np.copy(state)
         for i, s in enumerate(state):
             if s == -1:
@@ -196,7 +197,7 @@ class UCBAgent:
     def update(self, actions, rewards):
         # Update the counts and values for each action based on received rewards
         for i, reward in enumerate(rewards):
-            if reward > 0:
+            if reward >= 0:
                 # If the reward is positive, update the count and value for the corresponding action
                 self.counts[i] += 1
                 self.values[i] += (reward - self.values[i]) / self.counts[i]
@@ -205,3 +206,40 @@ class UCBAgent:
                 self.counts[i] += 1
 
 
+class SlidingWindowUCBAgent:
+    def __init__(self, c=2, window_size=100):
+        self.counts = None
+        self.values = None
+        self.c = c
+        self.window_size = window_size
+        self.recent_rewards = None
+        self.recent_counts = None
+
+    def initialize(self, n_actions):
+        self.counts = np.zeros(n_actions)
+        self.values = np.zeros(n_actions)
+        self.recent_rewards = [deque(maxlen=self.window_size) for _ in range(n_actions)]
+        self.recent_counts = [deque(maxlen=self.window_size) for _ in range(n_actions)]
+
+    def get_action(self):
+        if self.counts.min() == 0:
+            action = np.random.choice(np.where(self.counts == 0)[0])
+            ucb_values = np.zeros_like(self.values)
+            ucb_values[action] = 1
+        else:
+            ucb_values = self.values + self.c * np.sqrt(2 * np.log(self.counts.sum()) / self.counts)
+        return ucb_values
+
+    def update(self, actions, rewards):
+        for i, reward in enumerate(rewards):
+            if reward >= 0:
+                self.counts[i] += 1
+                self.recent_rewards[i].append(reward)
+                self.recent_counts[i].append(1)
+
+                # Calculate the average reward based on the sliding window
+                avg_reward = sum(self.recent_rewards[i]) / sum(self.recent_counts[i])
+                self.values[i] = avg_reward
+            else:
+                self.counts[i] += 1
+                self.recent_counts[i].append(0)
