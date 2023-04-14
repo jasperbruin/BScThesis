@@ -28,6 +28,7 @@ for episode in range(n_episode):
         action = agent.get_action(state)
         reward, state, stop = env.step(action)
 
+
         # do sth to update your algorithm here
 
         if stop:
