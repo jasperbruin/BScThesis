@@ -49,6 +49,7 @@ max_window_size = 100
 best_window_size = 1
 best_reward = -np.inf
 
+# TODO: Sliding window has to go over training loop not over testing loop
 for window_size in range(1, max_window_size + 1):
     agent = SlidingWindowUCBAgent(c=3, window_size=window_size)
     agent.initialize(env.n_camera)
