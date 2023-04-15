@@ -2,96 +2,92 @@
 # author: Cyril Hsu @ UvA-MNS
 # date: 23/02/2023
 
-"""
--   Different learning rates
--   Batch size
--   Number of hidden layers
--   Number of LSTM layers: in build_model
--   Regularization: dropout and L1L2
--   Use a validation set: Currently, the code only trains and tests the model.
-    To avoid overfitting while optimizing hyperparameters, consider splitting the
-    training data into a training set and a validation set. Then, during the
-    hyperparameter search, evaluate the model on the validation set.
-"""
-
-
+from agents import LSTM_RNN_Agent, SlidingWindowUCBAgent
+from rofarsEnv import ROFARS_v1
 import numpy as np
 from tqdm import tqdm
-from agents import LSTM_RNN_Agent
-from rofarsEnv import ROFARS_v1
 
 np.random.seed(0)
+env = ROFARS_v1()
 
-env = ROFARS_v1(length=36*10)
-agent = LSTM_RNN_Agent(
-    hidden_dim=32,
-    learning_rate=0.01,
-    n_lstm_layers=1,
-    dropout_rate=0.5,
-    l1_reg=0.001,
-    l2_reg=0.001
-)
+n_episode = 1
+max_window_size = 100
+best_window_size = 1
+best_reward = -np.inf
 
-n_episode = 30
-batch_size = 32
-X_batch = []
-y_batch = []
 
-# training
+# Collect necessary features for the LSTM RNN
+train_states = []
+train_rewards = []
+train_actions = []
+
+# Training loop
 for episode in range(n_episode):
-    # Reset loss and accuracy lists
-    training_loss = []
-    training_accuracy = []
-
+    agent = SlidingWindowUCBAgent(c=3, window_size=31)
+    agent.initialize(env.n_camera)  # Make sure to initialize the agent
     env.reset(mode='train')
-    agent.clear_records()
-    init_action = np.random.rand(env.n_camera)
-    reward, state, stop = env.step(init_action)
+    episode_states = []
+    episode_rewards = []
+    episode_actions = []
 
     for t in tqdm(range(env.length), initial=2):
-        action = agent.get_action(state)  # Corrected: Pass the state as input
+        action = agent.get_action()
         reward, state, stop = env.step(action)
 
-        if len(agent.records[0]) == agent.record_length:
-            X = np.array(agent.records).T.reshape(-1, agent.record_length, 1)
-            y = np.eye(env.n_camera)[np.argmax(action, axis=0)]
+        # Update the UCB Agent
+        agent.update(action, state)
 
-            X_batch.append(X)
-            y_batch.append(y)
-
-            if len(X_batch) == batch_size:
-                X_batch = np.concatenate(X_batch, axis=0)
-                y_batch = np.concatenate(y_batch, axis=0)
-                loss, accuracy = agent.train_on_batch(X_batch, y_batch)
-
-                # Append loss and accuracy inside the if statement
-                training_loss.append(loss)
-                training_accuracy.append(accuracy)
-
-                X_batch = []
-                y_batch = []
+        # Save state, reward, and action
+        episode_states.append(state)
+        episode_rewards.append(reward)
+        episode_actions.append(action)
 
         if stop:
             break
 
-    print(f'=== TRAINING episode {episode} ===')
-    print('[total reward]:', env.get_total_reward())
-    print('[average loss]:', np.mean(training_loss))
-    print('[average accuracy]:', np.mean(training_accuracy))
+    train_states.append(episode_states)
+    train_rewards.append(episode_rewards)
+    train_actions.append(episode_actions)
 
-# testing
+    total_reward = env.get_total_reward()
+    print(f'=== TRAINING episode {episode} ===')
+    print('[total reward]:', total_reward)
+
+
+# Save the training traces in a dictionary
+training_trace = {
+    'states': train_states,
+    'rewards': train_rewards,
+    'actions': train_actions
+}
+
+# Create the LSTM RNN Agent
+lstm_agent = LSTM_RNN_Agent(record_length=env.n_camera, input_dim=env.n_camera, hidden_dim=32,
+                            learning_rate=0.001, dropout_rate=0.0, l1_reg=0.0,
+                            l2_reg=0.0, epsilon=0.1)
+
+# Train the LSTM RNN Agent using the training_trace
+n_samples = sum([len(episode_states) - 9 for episode_states in train_states])
+
+X = np.concatenate([episode_states[i:i+10] for episode_states in train_states for i in range(len(episode_states) - 9)]).reshape(n_samples, 10, env.n_camera)
+y = np.concatenate([episode_actions[i+9] for episode_actions in train_actions for i in range(len(episode_actions) - 9)]).reshape(n_samples, env.n_camera)
+
+lstm_agent.train_on_batch(X, y)
+
+
+# Testing loop
 env.reset(mode='test')
-agent.clear_records()
-init_action = np.random.rand(env.n_camera)
-reward, state, stop = env.step(init_action)
+test_rewards = []
 
 for t in tqdm(range(env.length), initial=2):
-
-    action = agent.get_action(state)
+    action = lstm_agent.get_action(state)
     reward, state, stop = env.step(action)
+
+    test_rewards.append(reward)
 
     if stop:
         break
 
-print(f'====== TESTING ======')
-print('[total reward]:', env.get_total_reward())
+test_total_reward = np.sum(test_rewards)
+print(f'====== TESTING LSTM RNN Agent ======')
+print('[total reward]:', test_total_reward)
