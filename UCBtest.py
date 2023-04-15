@@ -6,7 +6,7 @@ from agents import UCBAgent, SlidingWindowUCBAgent
 np.random.seed(0)
 env = ROFARS_v1()
 
-n_episode = 30
+n_episode = 1
 max_window_size = 100
 best_window_size = 1
 best_reward = -np.inf
@@ -26,6 +26,10 @@ for window_size in range(1, max_window_size + 1):
 
             # Update the UCB Agent
             agent.update(action, state)
+
+            print("action: ", action)
+            print("state: ", state)
+            print("reward: ", reward)
 
             if stop:
                 break
