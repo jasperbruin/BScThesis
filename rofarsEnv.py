@@ -60,14 +60,6 @@ class ROFARS_v1:
 
         return reward, state, stop
 
-    def get_state(self, window_size):
-        state = []
-        for camera in self.cameras:
-            camera_data = camera['count'][
-                          max(0, self.index - window_size + 1):self.index + 1]
-            state.append(np.array(camera_data))
-        return state
-
 
 if __name__ == "__main__":
     env = ROFARS_v1()

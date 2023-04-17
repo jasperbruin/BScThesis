@@ -6,12 +6,12 @@ from collections import deque
 
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import SimpleRNN, Dense, Masking
 from tensorflow.keras.layers import LSTM, Dropout, Dense
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.regularizers import L1L2
-from tensorflow.keras.layers import Bidirectional
 import numpy as np
+
+
 
 
 class LSTM_RNN_Agent:
@@ -47,7 +47,7 @@ class LSTM_RNN_Agent:
 
         # Make sure records have enough data to form the required input shape
         if len(self.records[0]) < self.record_length:
-            action = np.random.rand(len(state))
+            action = np.random.rand(len(imputed_state))
         else:
             input_data = np.array(self.records).T.reshape(1,
                                                           self.record_length,
@@ -55,7 +55,7 @@ class LSTM_RNN_Agent:
 
             # Exploration vs. Exploitation
             if np.random.rand() < self.epsilon:
-                action = np.random.rand(len(state))
+                action = np.random.rand(len(imputed_state))
             else:
                 action = self.model.predict(input_data)
 

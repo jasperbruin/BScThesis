@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
-from agents import UCBAgent, SlidingWindowUCBAgent
+from agents import SlidingWindowUCBAgent
 
 np.random.seed(0)
 env = ROFARS_v1()
