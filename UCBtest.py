@@ -59,7 +59,7 @@ print(f'Best window size: {best_window_size}')
 print(f'Best [total reward]: {best_reward}')
 
 """
-Run 1:
+Run 1: 30 epochs, window size 20-80, 1 incremental step
 ====== TESTING window size 34 ======
 [total reward]: 0.315
 Best window size: 34
