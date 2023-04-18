@@ -24,11 +24,8 @@ for episode in range(n_episode):
     reward, state, stop = env.step(init_action)
 
     for t in tqdm(range(env.length), initial=2):
-
         action = agent.get_action(state)
         reward, state, stop = env.step(action)
-
-
         # do sth to update your algorithm here
 
         if stop:

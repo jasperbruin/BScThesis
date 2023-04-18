@@ -14,7 +14,6 @@ import numpy as np
 
 
 class baselineAgent:
-
     def __init__(self, record_length=10):
         self.records = None
         self.record_length = record_length
@@ -23,7 +22,7 @@ class baselineAgent:
 
 
     def get_action(self, state):
-        # add t orecord
+        # add to record
         self.add_record(state)
 
         # random action

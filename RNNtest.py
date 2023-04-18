@@ -34,6 +34,10 @@ for episode in range(n_episode):
         action = agent.get_action()
         reward, state, stop = env.step(action)
 
+        print("action: ", action)
+        print("state: ", state)
+        print("reward: ", reward)
+
         # Update the UCB Agent
         agent.update(action, state)
 

@@ -101,6 +101,7 @@ class SlidingWindowUCBAgent:
         self.window_size = window_size
         self.recent_rewards = None
         self.recent_counts = None
+        self.total_time_steps = 0  # Add a new counter for total time steps
 
     def initialize(self, n_actions):
         self.counts = np.zeros(n_actions)
@@ -114,10 +115,11 @@ class SlidingWindowUCBAgent:
             ucb_values = np.zeros_like(self.values)
             ucb_values[action] = 1
         else:
-            ucb_values = self.values + self.c * np.sqrt(2 * np.log(self.counts.sum()) / self.counts)
+            ucb_values = self.values + self.c * np.sqrt(2 * np.log(self.total_time_steps) / self.counts)
         return ucb_values
 
     def update(self, actions, rewards):
+        self.total_time_steps += 1  # Increment the total time steps counter
         for i, reward in enumerate(rewards):
             if reward >= 0:
                 self.counts[i] += 1

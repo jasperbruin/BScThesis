@@ -6,13 +6,13 @@ from agents import SlidingWindowUCBAgent
 np.random.seed(0)
 env = ROFARS_v1()
 
-n_episode = 1
-max_window_size = 100
+n_episode = 30
+max_window_size = 80
 best_window_size = 1
 best_reward = -np.inf
 
 # Find the best sliding window in the training session
-for window_size in range(1, max_window_size + 1):
+for window_size in range(20, max_window_size + 1):
     agent = SlidingWindowUCBAgent(c=3, window_size=window_size)
     agent.initialize(env.n_camera)
 
@@ -26,10 +26,6 @@ for window_size in range(1, max_window_size + 1):
 
             # Update the UCB Agent
             agent.update(action, state)
-
-            print("action: ", action)
-            print("state: ", state)
-            print("reward: ", reward)
 
             if stop:
                 break
@@ -61,3 +57,10 @@ print(f'====== TESTING window size {best_window_size} ======')
 print('[total reward]:', test_total_reward)
 print(f'Best window size: {best_window_size}')
 print(f'Best [total reward]: {best_reward}')
+
+"""
+Run 1:
+====== TESTING window size 34 ======
+[total reward]: 0.315
+Best window size: 34
+Best [total reward]: 0.591"""
