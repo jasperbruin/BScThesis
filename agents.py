@@ -1,9 +1,9 @@
 # agent script for 'Resource Optimization for Facial Recognition Systems (ROFARS)' project
 # author: Cyril Hsu @ UvA-MNS
 # date: 23/02/2023
-import random
-from collections import deque
 
+
+from collections import deque
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dropout, Dense
@@ -93,10 +93,10 @@ class LSTM_RNN_Agent:
                 imputed_state[i] = np.mean(self.records[i])
         return imputed_state
 
-from collections import deque
+
 
 class SlidingWindowUCBAgent:
-    def __init__(self, c=2, window_size=100):
+    def __init__(self, c=5, window_size=100):
         self.counts = None
         self.values = None
         self.c = c

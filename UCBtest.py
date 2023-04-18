@@ -1,3 +1,10 @@
+"""
+Suboptimal hyperparameters: The exploration parameter c and the window size might not be tuned correctly for this problem. You may need to perform hyperparameter tuning to find optimal values for both these parameters.
+Randomness: There is randomness in the action selection process when self.counts.min() == 0. This means that when there is a tie, a random action is selected, which could lead to suboptimal choices.
+Implementation issues: There might be a bug in the get_action method. In the else block, the action should be selected based on the highest UCB value, but instead, it is assigned the ucb_values array itself. This should be changed to:
+Non-stationary environment: The ROFARS environment is likely non-stationary, meaning the optimal actions may change over time. The SlidingWindowUCBAgent may not be able to adapt quickly enough to these changes, resulting in a lower total reward.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
@@ -15,7 +22,7 @@ total_rewards = []
 
 # Find the best sliding window in the training session
 for window_size in range(1, max_window_size + 1):
-    agent = SlidingWindowUCBAgent(c=3, window_size=window_size)
+    agent = SlidingWindowUCBAgent(c=3, window_size=window_size * 60)
     agent.initialize(env.n_camera)
 
     # Training loop
@@ -78,14 +85,15 @@ plt.show()
 
 """
 Run 1: window size 1-100, 1 incremental step
-====== TESTING window size 92 ======
+====== TESTING window size 50 ======
 [total reward]: 0.074
-Best window size: 92
-Best [total reward]: 0.541
+Best window size: 50
+Best [total reward]: 0.561
 
 Percentage increment = (0.541 - 0.5) / 0.5 x 100%
 = 0.041 / 0.5 x 100%
 = 8.2%
 
 Therefore, the percentage increment from 0.5 to 0.541 is 8.2%.
+
 """
