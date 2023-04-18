@@ -77,15 +77,15 @@ plt.show()
 
 
 """
-Run 1: window size 20-80, 1 incremental step
-====== TESTING window size 34 ======
-[total reward]: 0.315
-Best window size: 34
-Best [total reward]: 0.591
+Run 1: window size 1-100, 1 incremental step
+====== TESTING window size 92 ======
+[total reward]: 0.074
+Best window size: 92
+Best [total reward]: 0.541
 
-Percentage increment = (0.591 - 0.5) / 0.5 x 100%
-= 0.091 / 0.5 x 100%
-= 18.2%
+Percentage increment = (0.541 - 0.5) / 0.5 x 100%
+= 0.041 / 0.5 x 100%
+= 8.2%
 
-Therefore, the percentage increment from 0.5 to 0.591 is 18.2%.
+Therefore, the percentage increment from 0.5 to 0.541 is 8.2%.
 """
