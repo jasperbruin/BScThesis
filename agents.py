@@ -93,6 +93,8 @@ class LSTM_RNN_Agent:
                 imputed_state[i] = np.mean(self.records[i])
         return imputed_state
 
+from collections import deque
+
 class SlidingWindowUCBAgent:
     def __init__(self, c=2, window_size=100):
         self.counts = None
@@ -101,7 +103,7 @@ class SlidingWindowUCBAgent:
         self.window_size = window_size
         self.recent_rewards = None
         self.recent_counts = None
-        self.total_time_steps = 0  # Add a new counter for total time steps
+        self.total_time_steps = 0
 
     def initialize(self, n_actions):
         self.counts = np.zeros(n_actions)
@@ -112,15 +114,16 @@ class SlidingWindowUCBAgent:
     def get_action(self):
         if self.counts.min() == 0:
             action = np.random.choice(np.where(self.counts == 0)[0])
-            ucb_values = np.zeros_like(self.values)
-            ucb_values[action] = 1
         else:
-            ucb_values = self.values + self.c * np.sqrt(2 * np.log(self.total_time_steps) / self.counts)
-        return ucb_values
+            min_time_steps = min(self.total_time_steps, self.window_size)
+            recent_counts_sum = np.array([sum(counts) for counts in self.recent_counts])
+            ucb_values = self.values + self.c * np.sqrt(2 * np.log(min_time_steps) / recent_counts_sum)
+            action = np.argmax(ucb_values)
+        return action
 
-    def update(self, actions, rewards):
-        self.total_time_steps += 1  # Increment the total time steps counter
-        for i, reward in enumerate(rewards):
+    def update(self, actions, state):
+        self.total_time_steps += 1
+        for i, reward in enumerate(state):
             if reward >= 0:
                 self.counts[i] += 1
                 self.recent_rewards[i].append(reward)
@@ -132,3 +135,4 @@ class SlidingWindowUCBAgent:
             else:
                 self.counts[i] += 1
                 self.recent_counts[i].append(0)
+
