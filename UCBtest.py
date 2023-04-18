@@ -63,4 +63,11 @@ Run 1: 30 epochs, window size 20-80, 1 incremental step
 ====== TESTING window size 34 ======
 [total reward]: 0.315
 Best window size: 34
-Best [total reward]: 0.591"""
+Best [total reward]: 0.591
+
+Percentage increment = (0.591 - 0.5) / 0.5 x 100%
+= 0.091 / 0.5 x 100%
+= 18.2%
+
+Therefore, the percentage increment from 0.5 to 0.591 is 18.2%.
+"""
