@@ -112,14 +112,13 @@ class LSTM_RNN_Agent:
                 imputed_state[i] = np.mean(self.records[i])
         return imputed_state
 
+
 class SlidingWindowUCBAgent:
-    def __init__(self, c=5, window_size=100, mode='sw', gamma=0.99):
+    def __init__(self, c=5, window_size=100):
         self.counts = None
         self.values = None
         self.c = c
         self.window_size = window_size
-        self.mode = mode
-        self.gamma = gamma
         self.recent_rewards = None
         self.recent_counts = None
         self.total_time_steps = 0
@@ -140,14 +139,8 @@ class SlidingWindowUCBAgent:
             action = ucb_values
         return action
 
-    def calculate_discounted_reward(self, rewards, counts, discount_factor):
-        discount_factors = np.power(discount_factor,
-                                    np.arange(len(rewards))[::-1])
-        weighted_rewards = rewards * discount_factors * counts
-        return sum(weighted_rewards) / sum(discount_factors * counts)
 
     def update(self, actions, state):
-        global avg_reward_sw, avg_reward_d
         self.total_time_steps += 1
         for i, reward in enumerate(state):
             if reward >= 0:
@@ -155,26 +148,68 @@ class SlidingWindowUCBAgent:
                 self.recent_rewards[i].append(reward)
                 self.recent_counts[i].append(1)
 
-                if self.mode in ['sw', 'both']:
-                    # Calculate the average reward based on the sliding window
-                    avg_reward_sw = sum(self.recent_rewards[i]) / sum(
-                        self.recent_counts[i])
-
-                if self.mode in ['d', 'both']:
-                    # Calculate the average reward based on discount factor
-                    rewards = np.array(self.recent_rewards[i])
-                    counts = np.array(self.recent_counts[i])
-                    avg_reward_d = self.calculate_discounted_reward(rewards,
-                                                                    counts,
-                                                                    self.gamma)
-
-                if self.mode == 'sw':
-                    self.values[i] = avg_reward_sw
-                elif self.mode == 'd':
-                    self.values[i] = avg_reward_d
-                elif self.mode == 'both':
-                    self.values[i] = (avg_reward_sw + avg_reward_d) / 2
-
+                # Calculate the average reward based on the sliding window
+                avg_reward = sum(self.recent_rewards[i]) / sum(self.recent_counts[i])
+                self.values[i] = avg_reward
             else:
                 self.counts[i] += 1
                 self.recent_counts[i].append(0)
+
+class DiscountedUCBAgent:
+    def __init__(self, c=5, gamma=0.99):
+        self.counts = None
+        self.values = None
+        self.c = c
+        self.gamma = gamma
+        self.total_time_steps = 0
+
+    def initialize(self, n_actions):
+        self.counts = np.zeros(n_actions)
+        self.values = np.zeros(n_actions)
+
+    def get_action(self):
+        if self.counts.min() == 0:
+            action = np.random.choice(np.where(self.counts == 0)[0])
+        else:
+            ucb_values = self.values + self.c * np.sqrt(np.log(self.total_time_steps) / self.counts)
+            action = ucb_values
+        return action
+
+    def update(self, actions, state):
+        self.total_time_steps += 1
+        for i, reward in enumerate(state):
+            if reward >= 0:
+                self.counts[i] += 1
+                self.values[i] = self.values[i] + (1 / self.counts[i]) * (reward - self.values[i])
+            else:
+                self.counts[i] += 1
+
+
+# Create a vanilla UCBAgent
+class UCBAgent:
+    def __init__(self, c=5):
+        self.counts = None
+        self.values = None
+        self.c = c
+        self.total_time_steps = 0
+
+    def initialize(self, n_actions):
+        self.counts = np.zeros(n_actions)
+        self.values = np.zeros(n_actions)
+
+    def get_action(self):
+        if self.counts.min() == 0:
+            action = np.random.choice(np.where(self.counts == 0)[0])
+        else:
+            ucb_values = self.values + self.c * np.sqrt(np.log(self.total_time_steps) / self.counts)
+            action = ucb_values
+        return action
+
+    def update(self, actions, state):
+        self.total_time_steps += 1
+        for i, reward in enumerate(state):
+            if reward >= 0:
+                self.counts[i] += 1
+                self.values[i] = self.values[i] + (1 / self.counts[i]) * (reward - self.values[i])
+            else:
+                self.counts[i] += 1
