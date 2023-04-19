@@ -139,7 +139,7 @@ def DUCBExperiment():
 
     # Find the best gamma in the training session
     for gamma in gamma_values:
-        agent = SlidingWindowUCBAgent(c=3, window_size=1, mode='d', gamma=gamma)  # Dynamic mode
+        agent = SlidingWindowUCBAgent(c=3, window_size=1, mode='d', gamma=gamma)
         agent.initialize(env.n_camera)
 
         # Training loop
@@ -216,3 +216,24 @@ if __name__ == '__main__':
         DUCBExperiment()
     else:
         print("Invalid input")
+
+
+"""
+Baseline:
+====== TESTING ======
+[total reward]: 0.506
+
+
+Run 1:
+
+TRAINING window size 50 * 60 ===
+[total reward]: 0.558                       
+====== TESTING window size 50 * 60 ======
+[total reward]: 0.527
+
+Difference = Run 1 - Baseline = 0.527 - 0.506 = 0.021
+Percentage growth = (Difference / Baseline) x 100 = (0.021 / 0.506) x 100 ≈ 4.15%
+Growth: 4.15%.
+"""
+
+
