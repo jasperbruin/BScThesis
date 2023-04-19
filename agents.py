@@ -181,7 +181,7 @@ class DiscountedUCBAgent:
             if reward >= 0:
                 self.counts[i] += 1
                 alpha = 1 / self.counts[i]
-                self.values[i] = (1 - alpha) * self.values[i] + alpha * reward * pow(self.gamma, self.total_time_steps)
+                self.values[i] = (1 - alpha) * self.values[i] + alpha * reward * pow(self.gamma, self.total_time_steps - self.counts[i])
             else:
                 self.counts[i] += 1
 

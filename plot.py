@@ -7,7 +7,7 @@ def add_text_label(ax, x, y, value, color='white', fontweight='bold'):
 baseline_strong = 0.506
 baseline_weak = 0.317
 runs = ['Run 1 SW-UCB', 'Run 2 UCB1', 'Run 3 D-UCB']
-test_rewards = [0.528, 0.39, 0.377]
+test_rewards = [0.528, 0.39, 0.389]
 
 # Calculate percentage growths
 growth_strong = [(reward - baseline_strong) / baseline_strong * 100 for reward in test_rewards]
@@ -30,4 +30,5 @@ for i, (strong_growth, weak_growth) in enumerate(zip(growth_strong, growth_weak)
     add_text_label(ax, i - bar_width / 2, strong_growth + weak_growth / 2, weak_growth)
 
 plt.tight_layout()
+plt.savefig('UCBtest.png')
 plt.show()

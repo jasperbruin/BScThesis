@@ -82,7 +82,7 @@ def SWUCBExperiment():
 def DiscountedUCBExperiment():
     np.random.seed(0)
     env = ROFARS_v1()
-    min_gamma = 0.5
+    min_gamma = 0.1
     max_gamma = 1.0
     gamma_step = 0.025
     best_gamma = min_gamma
@@ -274,16 +274,17 @@ Growth: 23.0%.
 
 Run 3 D-UCB:
 ====== TESTING gamma ======
-[total reward]: 0.377
-Best gamma: 0.9750000000000004
+[total reward]: 0.389
+Best gamma: 0.55
+Best [total reward]: 0.504
 
-Difference Strong Baseline = Run 3 - Baseline = 0.377 - 0.506 = -0.129
-Percentage growth = (Difference / Baseline) x 100 = -0.129 / 0.506 x 100 = -25.5%
-Growth: -25.5%.
+Difference Strong Baseline = Run 3 - Baseline = 0.389 - 0.506 = -0.117
+Percentage growth = (Difference / Baseline) x 100 = -0.117 / 0.506 x 100 = -23.1%
+Growth: -23.1%.
 
-Difference Weak Baseline = Run 3 - Baseline = 0.377 - 0.317 = 0.06
-Percentage growth = (Difference / Baseline) x 100 = 0.06 / 0.317 x 100 = 18.9%
-Growth: 18.9%.
+Difference Weak Baseline = Run 3 - Baseline = 0.389 - 0.317 = 0.072
+Percentage growth = (Difference / Baseline) x 100 = 0.072 / 0.317 x 100 = 22.8%
+Growth: 22.8%.
 
 
 See plot.py for plot for a visual representation of the results.
