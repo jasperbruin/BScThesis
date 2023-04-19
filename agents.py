@@ -140,6 +140,12 @@ class SlidingWindowUCBAgent:
             action = ucb_values
         return action
 
+    def calculate_discounted_reward(self, rewards, counts, discount_factor):
+        discount_factors = np.power(discount_factor,
+                                    np.arange(len(rewards))[::-1])
+        weighted_rewards = rewards * discount_factors * counts
+        return sum(weighted_rewards) / sum(discount_factors * counts)
+
     def update(self, actions, state):
         global avg_reward_sw, avg_reward_d
         self.total_time_steps += 1
@@ -151,14 +157,16 @@ class SlidingWindowUCBAgent:
 
                 if self.mode in ['sw', 'both']:
                     # Calculate the average reward based on the sliding window
-                    avg_reward_sw = sum(self.recent_rewards[i]) / sum(self.recent_counts[i])
+                    avg_reward_sw = sum(self.recent_rewards[i]) / sum(
+                        self.recent_counts[i])
 
                 if self.mode in ['d', 'both']:
                     # Calculate the average reward based on discount factor
                     rewards = np.array(self.recent_rewards[i])
                     counts = np.array(self.recent_counts[i])
-                    discount_factors = np.power(self.gamma, np.arange(len(rewards))[::-1])
-                    avg_reward_d = sum(rewards * discount_factors) / sum(counts * discount_factors)
+                    avg_reward_d = self.calculate_discounted_reward(rewards,
+                                                                    counts,
+                                                                    self.gamma)
 
                 if self.mode == 'sw':
                     self.values[i] = avg_reward_sw
@@ -170,4 +178,3 @@ class SlidingWindowUCBAgent:
             else:
                 self.counts[i] += 1
                 self.recent_counts[i].append(0)
-

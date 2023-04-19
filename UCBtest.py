@@ -242,7 +242,7 @@ def BothExperiment():
         gamma_rewards.append(total_reward)
 
     # Use the best gamma for testing
-    agent = SlidingWindowUCBAgent(c=3, window_size=1, mode='d', gamma=best_gamma)
+    agent = SlidingWindowUCBAgent(c=3, window_size=50 * 60, mode='d', gamma=best_gamma)
     agent.initialize(env.n_camera)
 
     env.reset(mode='test')
@@ -297,7 +297,7 @@ Baseline:
 [total reward]: 0.506
 
 
-Run 1:
+Run 1 SW-UCB:
 TRAINING window size 50 * 60 ===
 [total reward]: 0.558                       
 ====== TESTING window size 50 * 60 ======
@@ -310,6 +310,12 @@ Growth: 4.3%.
 Difference Weak Baseline = Run 1 - Baseline = 0.528 - 0.317 = 0.211
 Percentage growth = (Difference / Baseline) x 100 = 0.211 / 0.317 x 100 = 66.4%
 Growth: 66.4%. 
+
+
+Run 2: SW-D:
+I note that the environment's rewards are not sensitive to the discount factor 
+or if the agent is not exploring effectively, the total reward might still remain 
+the same despite the change. 
 """
 
 
