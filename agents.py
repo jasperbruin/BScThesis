@@ -115,7 +115,7 @@ class SlidingWindowUCBAgent:
             min_time_steps = min(self.total_time_steps, self.window_size)
             recent_counts_sum = np.array([sum(counts) for counts in self.recent_counts])
             ucb_values = self.values + self.c * np.sqrt(2 * np.log(min_time_steps) / recent_counts_sum)
-            action = np.argmax(ucb_values)
+            action = ucb_values
         return action
 
     def update(self, actions, state):

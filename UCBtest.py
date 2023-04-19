@@ -22,7 +22,9 @@ total_rewards = []
 
 # Find the best sliding window in the training session
 for window_size in range(1, max_window_size + 1):
-    agent = SlidingWindowUCBAgent(c=3, window_size=window_size * 60)
+    agent = SlidingWindowUCBAgent(c=3, window_size=window_size * 60,
+                                  mode='sw')  # Sliding Window mode
+
     agent.initialize(env.n_camera)
 
     # Training loop
