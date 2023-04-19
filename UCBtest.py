@@ -213,7 +213,7 @@ def BothExperiment():
 
     # Find the best gamma in the training session
     for gamma in gamma_values:
-        agent = SlidingWindowUCBAgent(c=3, window_size=50, mode='both', gamma=gamma)
+        agent = SlidingWindowUCBAgent(c=3, window_size=50 * 60, mode='both', gamma=gamma)
         agent.initialize(env.n_camera)
 
         # Training loop
@@ -298,15 +298,18 @@ Baseline:
 
 
 Run 1:
-
 TRAINING window size 50 * 60 ===
 [total reward]: 0.558                       
 ====== TESTING window size 50 * 60 ======
-[total reward]: 0.527
+[total reward]: 0.528
 
-Difference = Run 1 - Baseline = 0.527 - 0.506 = 0.021
-Percentage growth = (Difference / Baseline) x 100 = (0.021 / 0.506) x 100 ≈ 4.15%
-Growth: 4.15%.
+Difference Strong Baseline = Run 1 - Baseline = 0.528 - 0.506 = 0.022
+Percentage growth = (Difference / Baseline) x 100 = 0.022 / 0.506 x 100 = 4.3%
+Growth: 4.3%.
+
+Difference Weak Baseline = Run 1 - Baseline = 0.528 - 0.317 = 0.211
+Percentage growth = (Difference / Baseline) x 100 = 0.211 / 0.317 x 100 = 66.4%
+Growth: 66.4%. 
 """
 
 
