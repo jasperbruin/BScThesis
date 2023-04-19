@@ -284,6 +284,9 @@ Growth: -25.5%.
 Difference Weak Baseline = Run 3 - Baseline = 0.377 - 0.317 = 0.06
 Percentage growth = (Difference / Baseline) x 100 = 0.06 / 0.317 x 100 = 18.9%
 Growth: 18.9%.
+
+
+See plot.py for plot for a visual representation of the results.
 """
 
 
