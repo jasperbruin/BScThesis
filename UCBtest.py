@@ -201,11 +201,82 @@ def DUCBExperiment():
     plt.show()
 
 
+def BothExperiment():
+    np.random.seed(0)
+    env = ROFARS_v1()
 
+    gamma_values = np.linspace(0.5, 0.99, 20)  # Adjust the range and number of gamma values as needed
+    best_gamma = 0.99
+    best_reward = -np.inf
+
+    gamma_rewards = []
+
+    # Find the best gamma in the training session
+    for gamma in gamma_values:
+        agent = SlidingWindowUCBAgent(c=3, window_size=50, mode='both', gamma=gamma)
+        agent.initialize(env.n_camera)
+
+        # Training loop
+        env.reset(mode='train')
+
+        for t in tqdm(range(env.length), initial=2):
+            action = agent.get_action()
+            reward, state, stop = env.step(action)
+
+            # Update the UCB Agent
+            agent.update(action, state)
+
+            if stop:
+                break
+
+        total_reward = env.get_total_reward()
+        print(f'=== TRAINING gamma {gamma} ===')
+        print('[total reward]:', total_reward)
+
+        # Save the best gamma and total reward
+        if total_reward > best_reward:
+            best_reward = total_reward
+            best_gamma = gamma
+
+        # Record the gamma value and its total reward
+        gamma_rewards.append(total_reward)
+
+    # Use the best gamma for testing
+    agent = SlidingWindowUCBAgent(c=3, window_size=1, mode='d', gamma=best_gamma)
+    agent.initialize(env.n_camera)
+
+    env.reset(mode='test')
+
+    for t in tqdm(range(env.length), initial=2):
+        action = agent.get_action()
+        reward, state, stop = env.step(action)
+
+        # Update the UCB Agent
+        agent.update(action, state)
+
+        if stop:
+            break
+
+    test_total_reward = env.get_total_reward()
+    print(f'====== TESTING gamma {best_gamma} ======')
+    print('[total reward]:', test_total_reward)
+    print(f'Best gamma: {best_gamma}')
+    print(f'Best [total reward]: {best_reward}')
+
+    # Plot the gamma values and their total rewards
+    plt.plot(gamma_values, gamma_rewards, label=f"Best gamma: {best_gamma:.2f}, Total reward: {best_reward:.2f}")
+    plt.xlabel('Gamma Value', fontsize=12)
+    plt.ylabel('Total Reward', fontsize=12)
+    plt.title('Discounted UCB: Gamma Value vs Total Reward', fontsize=14)
+    plt.legend(fontsize=10)
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig('DUCB.png')
+    plt.show()
 
 if __name__ == '__main__':
     inp = input(
-        'Choose an experiment:\n1. Sliding Window UCB\n2. Discounted UCB\n')
+        'Choose an experiment:\n1. Sliding Window UCB\n2. Discounted UCB\n3. Both\n')
     if inp == '1':
         inp2 = input('Choose an experiment:\n1. Find optimal sliding window \n2. Use optimal sliding window (50 * 60) minutes\n')
         if inp2 == '1':
@@ -214,6 +285,8 @@ if __name__ == '__main__':
             SWUCBOpt()
     elif inp == '2':
         DUCBExperiment()
+    elif inp == '3':
+        BothExperiment()
     else:
         print("Invalid input")
 
