@@ -170,7 +170,7 @@ def SWUCBOpt(agent_type):
 
     """TRAINING"""
     if agent_type == 1:
-        agent = UCBAgent(c=3)
+        agent = UCBAgent()
     elif agent_type == 2:
         agent = SlidingWindowUCBAgent(c=3, window_size=best_window_size)
     elif agent_type == 3:
@@ -196,7 +196,7 @@ def SWUCBOpt(agent_type):
 
     """TESTING"""
     if agent_type == 1:
-        agent = UCBAgent(c=3)
+        agent = UCBAgent()
     elif agent_type == 2:
         agent = SlidingWindowUCBAgent(c=3, window_size=best_window_size)
     elif agent_type == 3:
@@ -285,9 +285,6 @@ Growth: -23.1%.
 Difference Weak Baseline = Run 3 - Baseline = 0.389 - 0.317 = 0.072
 Percentage growth = (Difference / Baseline) x 100 = 0.072 / 0.317 x 100 = 22.8%
 Growth: 22.8%.
-
-
-See plot.py for plot for a visual representation of the results.
 """
 
 
