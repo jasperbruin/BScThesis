@@ -1,10 +1,3 @@
-"""
-Suboptimal hyperparameters: The exploration parameter c and the window size might not be tuned correctly for this problem. You may need to perform hyperparameter tuning to find optimal values for both these parameters.
-Randomness: There is randomness in the action selection process when self.counts.min() == 0. This means that when there is a tie, a random action is selected, which could lead to suboptimal choices.
-Implementation issues: There might be a bug in the get_action method. In the else block, the action should be selected based on the highest UCB value, but instead, it is assigned the ucb_values array itself. This should be changed to:
-Non-stationary environment: The ROFARS environment is likely non-stationary, meaning the optimal actions may change over time. The SlidingWindowUCBAgent may not be able to adapt quickly enough to these changes, resulting in a lower total reward.
-"""
-
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
