@@ -180,12 +180,12 @@ class DiscountedUCBAgent:
         for i, reward in enumerate(state):
             if reward >= 0:
                 self.counts[i] += 1
-                self.values[i] = self.values[i] + (1 / self.counts[i]) * (reward - self.values[i])
+                alpha = 1 / self.counts[i]
+                self.values[i] = (1 - alpha) * self.values[i] + alpha * reward * pow(self.gamma, self.total_time_steps)
             else:
                 self.counts[i] += 1
 
 
-# Create a vanilla UCBAgent
 class UCBAgent:
     def __init__(self, c=5):
         self.counts = None
