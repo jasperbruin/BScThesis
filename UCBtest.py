@@ -61,6 +61,9 @@ for t in tqdm(range(env.length), initial=2):
     action = agent.get_action()
     reward, state, stop = env.step(action)
 
+    # Update the UCB Agent
+    agent.update(action, state)
+
     if stop:
         break
 
@@ -80,20 +83,3 @@ plt.grid()
 plt.tight_layout()
 plt.savefig('UCB.png')
 plt.show()
-
-
-
-"""
-Run 1: window size 1-100, 1 incremental step
-====== TESTING window size 50 ======
-[total reward]: 0.074
-Best window size: 50
-Best [total reward]: 0.561
-
-Percentage increment = (0.541 - 0.5) / 0.5 x 100%
-= 0.041 / 0.5 x 100%
-= 8.2%
-
-Therefore, the percentage increment from 0.5 to 0.541 is 8.2%.
-
-"""

@@ -11,9 +11,6 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.regularizers import L1L2
 import numpy as np
 
-
-
-
 class LSTM_RNN_Agent:
     def __init__(self, record_length=10, input_dim=1, hidden_dim=32,
                  learning_rate=0.001, dropout_rate=0.0,
@@ -93,14 +90,14 @@ class LSTM_RNN_Agent:
                 imputed_state[i] = np.mean(self.records[i])
         return imputed_state
 
-
-
 class SlidingWindowUCBAgent:
-    def __init__(self, c=5, window_size=100):
+    def __init__(self, c=5, window_size=100, mode='sw', gamma=0.99):
         self.counts = None
         self.values = None
         self.c = c
         self.window_size = window_size
+        self.mode = mode
+        self.gamma = gamma
         self.recent_rewards = None
         self.recent_counts = None
         self.total_time_steps = 0
@@ -118,11 +115,11 @@ class SlidingWindowUCBAgent:
             min_time_steps = min(self.total_time_steps, self.window_size)
             recent_counts_sum = np.array([sum(counts) for counts in self.recent_counts])
             ucb_values = self.values + self.c * np.sqrt(2 * np.log(min_time_steps) / recent_counts_sum)
-            action = ucb_values
+            action = np.argmax(ucb_values)
         return action
 
-
     def update(self, actions, state):
+        global avg_reward_sw, avg_reward_d
         self.total_time_steps += 1
         for i, reward in enumerate(state):
             if reward >= 0:
@@ -130,9 +127,24 @@ class SlidingWindowUCBAgent:
                 self.recent_rewards[i].append(reward)
                 self.recent_counts[i].append(1)
 
-                # Calculate the average reward based on the sliding window
-                avg_reward = sum(self.recent_rewards[i]) / sum(self.recent_counts[i])
-                self.values[i] = avg_reward
+                if self.mode in ['sw', 'both']:
+                    # Calculate the average reward based on the sliding window
+                    avg_reward_sw = sum(self.recent_rewards[i]) / sum(self.recent_counts[i])
+
+                if self.mode in ['d', 'both']:
+                    # Calculate the average reward based on discount factor
+                    rewards = np.array(self.recent_rewards[i])
+                    counts = np.array(self.recent_counts[i])
+                    discount_factors = np.power(self.gamma, np.arange(len(rewards))[::-1])
+                    avg_reward_d = sum(rewards * discount_factors) / sum(counts * discount_factors)
+
+                if self.mode == 'sw':
+                    self.values[i] = avg_reward_sw
+                elif self.mode == 'd':
+                    self.values[i] = avg_reward_d
+                elif self.mode == 'both':
+                    self.values[i] = (avg_reward_sw + avg_reward_d) / 2
+
             else:
                 self.counts[i] += 1
                 self.recent_counts[i].append(0)
