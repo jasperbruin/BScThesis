@@ -282,15 +282,15 @@ Growth: 62.1%.
 
 Run 3 D-UCB:
 ====== TESTING gamma ======
-[total reward]: 0.514
-Best gamma: 0.9750000000000004
-Best [total reward]: 0.555
+[total reward]: 0.549
+Best gamma: 0.9974999999999979
+Best [total reward]: 0.583
 
-Difference Strong Baseline = Run 3 - Baseline = 0.514 - 0.506 = 0.008
-Percentage growth = (Difference / Baseline) x 100 = 0.008 / 0.506 x 100 = 1.6%
+Difference Strong Baseline = Run 3 - Baseline = 0.549 - 0.506 = 0.043
+Percentage growth = (Difference / Baseline) x 100 = 0.043 / 0.506 x 100 = 8.5%
 
-Difference Weak Baseline = Run 3 - Baseline = 0.514 - 0.317 = 0.197
-Percentage growth = (Difference / Baseline) x 100 = 0.197 / 0.317 x 100 = 62.1%
+Difference Weak Baseline = Run 3 - Baseline = 0.549 - 0.317 = 0.232
+Percentage growth = (Difference / Baseline) x 100 = 0.232 / 0.317 x 100 = 73.2%
 """
 
 
