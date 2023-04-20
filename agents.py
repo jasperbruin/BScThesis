@@ -131,7 +131,6 @@ class SlidingWindowUCBAgent:
 
     def get_action(self):
         if self.counts.min == 0:
-        # action = np.random. choice(np.where(self.counts == 0) [0])
             idx = np.random.choice(np.where(self.counts == 0)[0])
             action = np.zeros(len(self.values))
             action[idx] = 1
@@ -156,64 +155,50 @@ class SlidingWindowUCBAgent:
                 self.values[i] = avg_reward
             else:
                 self.counts[i] += 0
-                # self.recent_counts[i].append(0)
+                self.recent_counts[i].append(0)
 
 class DiscountedUCBAgent:
-    def __init__(self, c=5, gamma=0.99):
+    def __init__(self, c=5, gamma=0.9):
         self.counts = None
         self.values = None
         self.c = c
         self.gamma = gamma
         self.total_time_steps = 0
-        self.rewards_history = None
 
     def initialize(self, n_actions):
         self.counts = np.zeros(n_actions)
         self.values = np.zeros(n_actions)
-        self.rewards_history = [deque() for _ in range(n_actions)]
 
+    def _calculate_discounted_counts_and_rewards(self):
+        discounted_counts = np.zeros_like(self.counts)
+        discounted_rewards = np.zeros_like(self.values)
+
+        for i in range(len(self.counts)):
+            for s in range(1, self.total_time_steps + 1):
+                discounted_counts[i] += self.gamma**(self.total_time_steps - s) if self.counts[i] >= s else 0
+                discounted_rewards[i] += self.gamma**(self.total_time_steps - s) * self.values[i] if self.counts[i] >= s else 0
+
+        return discounted_counts, discounted_rewards
 
     def get_action(self):
-        if self.counts.min == 0:
-        # action = np.random. choice(np.where(self.counts == 0) [0])
+        if self.counts.min() == 0:
             idx = np.random.choice(np.where(self.counts == 0)[0])
             action = np.zeros(len(self.values))
             action[idx] = 1
         else:
-            ucb_values = self.values + self.c * np.sqrt(2 * np.log(self.total_time_steps) / self.counts)
-            action = ucb_values
+            discounted_counts, discounted_rewards = self._calculate_discounted_counts_and_rewards()
+            discounted_means = discounted_rewards / discounted_counts
+            nt_gamma = np.sum(discounted_counts)
+            ct = 2 * np.sqrt((self.c * np.log(nt_gamma)) / discounted_counts)
+            action = discounted_means + ct
         return action
 
     def update(self, actions, state):
-        """
-        The previous implementation of the update function for D-UCB calculated
-        the discounted reward using (self.total_time_steps - self.counts[i]).
-        However, this may not be the correct way to apply the discount factor.
-        Instead, I can maintain a list of all rewards received for each action
-        and apply the discount factor based on the time steps since the reward was received.
-
-        But this does drop the performance of the agent significantly because:
-        1. Immediate rewards are more significant:  The problem could be more
-        focused on immediate rewards rather than long-term rewards.
-
-        2. Non-stationary environment: If the environment is non-stationary,
-        meaning the reward distribution changes over time, the D-UCB agent's
-        performance could suffer due to its focus on long-term rewards.
-
-        3. Exploration-exploitation balance: We can try different values of c
-        """
-
         self.total_time_steps += 1
         for i, reward in enumerate(state):
             if reward >= 0:
                 self.counts[i] += 1
-                self.rewards_history[i].append((self.total_time_steps, reward))
-
-                discounted_rewards = 0
-                for t, r in self.rewards_history[i]:
-                    discounted_rewards += r * pow(self.gamma, self.total_time_steps - t)
-
-                self.values[i] = discounted_rewards / self.counts[i]
+                self.values[i] += reward
             else:
                 self.counts[i] += 0
 

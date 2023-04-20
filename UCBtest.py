@@ -7,7 +7,7 @@ from agents import SlidingWindowUCBAgent, UCBAgent, DiscountedUCBAgent
 def SWUCBExperiment():
     np.random.seed(0)
     env = ROFARS_v1()
-    max_window_size = 100
+    max_window_size = 150
     best_window_size = 1
     best_reward = -np.inf
 
@@ -15,7 +15,7 @@ def SWUCBExperiment():
     total_rewards = []
 
     # Find the best sliding window in the training session
-    for window_size in range(1, max_window_size + 1):
+    for window_size in range(100, max_window_size + 1):
         agent = SlidingWindowUCBAgent(c=3, window_size=window_size * 60)
 
         agent.initialize(env.n_camera)
@@ -34,7 +34,7 @@ def SWUCBExperiment():
                 break
 
         total_reward = env.get_total_reward()
-        print(f'=== TRAINING ===')
+        print(f'=== TRAINING === window size: {window_size}')
         print('[total reward]:', total_reward)
 
         # Save the best window size and total reward
@@ -82,7 +82,7 @@ def SWUCBExperiment():
 def DiscountedUCBExperiment():
     np.random.seed(0)
     env = ROFARS_v1()
-    min_gamma = 0.1
+    min_gamma = 0.5
     max_gamma = 1.0
     gamma_step = 0.025
     best_gamma = min_gamma
@@ -93,7 +93,7 @@ def DiscountedUCBExperiment():
 
     # Find the best gamma in the training session
     for gamma in np.arange(min_gamma, max_gamma, gamma_step):
-        agent = DiscountedUCBAgent(c=5, gamma=gamma)
+        agent = DiscountedUCBAgent(c=3, gamma=gamma)
         agent.initialize(env.n_camera)
 
         # Training loop
@@ -164,14 +164,18 @@ def SWUCBOpt(agent_type):
     elif agent_type == 3:
         print("D-UCB")
 
+
+
     np.random.seed(0)
     env = ROFARS_v1()
-    best_window_size = 50 * 60
+
 
     """TRAINING"""
     if agent_type == 1:
         agent = UCBAgent()
     elif agent_type == 2:
+        inp = int(input("Enter the window size: "))
+        best_window_size = inp * 60
         agent = SlidingWindowUCBAgent(c=3, window_size=best_window_size)
     elif agent_type == 3:
         agent = DiscountedUCBAgent(c=3, gamma=0.5)
@@ -226,7 +230,11 @@ if __name__ == '__main__':
     if inp == 1:
         SWUCBOpt(1)
     elif inp == 2:
-        SWUCBOpt(2)
+        inp2 = int(input('Find optimal window size? (1. Yes, 2. No)'))
+        if inp2 == 1:
+            SWUCBExperiment()
+        elif inp2 == 2:
+            SWUCBOpt(2)
     elif inp == 3:
         inp2 = int(input('Find optimal gamma? (1. Yes, 2. No)'))
         if inp2 == 1:
