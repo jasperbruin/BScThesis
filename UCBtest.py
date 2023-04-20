@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
 from agents import SlidingWindowUCBAgent, UCBAgent, DiscountedUCBAgent
+import time
 
 def SWUCBExperiment():
     np.random.seed(0)
@@ -221,10 +222,53 @@ def SWUCBOpt(agent_type):
     print('[total reward]:', env.get_total_reward())
 
 
+def timeexperiment(agent_type):
+    if agent_type == 1:
+        print("UCB-1")
+    elif agent_type == 2:
+        print("SW-UCB")
+    elif agent_type == 3:
+        print("D-UCB")
+
+    np.random.seed(0)
+    env = ROFARS_v1()
+
+    if agent_type == 1:
+        agent = UCBAgent()
+    elif agent_type == 2:
+        best_window_size = 50 * 60
+        agent = SlidingWindowUCBAgent(window_size=best_window_size)
+    elif agent_type == 3:
+        agent = DiscountedUCBAgent(gamma=0.9974999999999979)
+    agent.initialize(env.n_camera)
+
+    env.reset(mode='train')
+
+    inference_times = []
+
+    for t in tqdm(range(env.length), initial=2):
+        start_time = time.time()
+        action = agent.get_action()
+        end_time = time.time()
+        inference_time = end_time - start_time
+        inference_times.append(inference_time)
+
+        reward, state, stop = env.step(action)
+        agent.update(action, state)
+
+        if stop:
+            break
+
+    total_reward = env.get_total_reward()
+    print(f'=== TRAINING===')
+    print('[total reward]:', total_reward)
+
+    return np.mean(inference_times)
+
 
 if __name__ == '__main__':
     print("Enter the agent you want to test: ")
-    inp = int(input('1. UCB-1 \n2. SW-UCB \n3. D-UCB'))
+    inp = int(input('1. UCB-1 \n2. SW-UCB \n3. D-UCB\n4. Time experiment\n'))
     if inp == 1:
         SWUCBOpt(1)
     elif inp == 2:
@@ -239,6 +283,35 @@ if __name__ == '__main__':
             DiscountedUCBExperiment()
         elif inp2 == 2:
             SWUCBOpt(3)
+    elif inp == 4:
+        ucb1_inference_times = timeexperiment(1)
+        sw_ucb_inference_times = timeexperiment(2)
+        d_ucb_inference_times = timeexperiment(3)
+
+        # Plot the average inference times for each agent as a bar plot
+        agents = ['UCB-1', 'SW-UCB', 'D-UCB']
+        avg_inference_times = [ucb1_inference_times,
+                               sw_ucb_inference_times,
+                               d_ucb_inference_times]
+
+        print(avg_inference_times)
+
+        # Black and white color palette
+        colors = ['#333333', '#666666', '#999999']
+
+        plt.bar(agents, avg_inference_times, color=colors, edgecolor='black',
+                linewidth=1)
+        plt.xlabel('Agent', fontsize=12)
+        plt.ylabel('Average Inference Time (s)', fontsize=10)
+        plt.title(
+            'Average Inference Time for UCB-1, SW-UCB, and D-UCB during Training',
+            fontsize=10)
+        plt.grid(axis='y', linestyle='--', alpha=0.7)
+        plt.tight_layout()
+        plt.savefig('UCB_AverageInferenceTime_Training_BW.png')
+        plt.show()
+
+
 
 
 
