@@ -189,7 +189,7 @@ class DiscountedUCBAgent:
         The previous implementation of the update function for D-UCB calculated
         the discounted reward using (self.total_time_steps - self.counts[i]).
         However, this may not be the correct way to apply the discount factor.
-        Instead, you can maintain a list of all rewards received for each action
+        Instead, I can maintain a list of all rewards received for each action
         and apply the discount factor based on the time steps since the reward was received.
 
         But this does drop the performance of the agent significantly because:
