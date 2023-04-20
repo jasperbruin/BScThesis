@@ -160,47 +160,49 @@ class SlidingWindowUCBAgent:
 class DiscountedUCBAgent:
     def __init__(self, c=5, gamma=0.9):
         self.counts = None
+        self.discounted_counts = None
         self.values = None
+        self.discounted_rewards = None
         self.c = c
         self.gamma = gamma
         self.total_time_steps = 0
 
     def initialize(self, n_actions):
         self.counts = np.zeros(n_actions)
+        self.discounted_counts = np.zeros(n_actions)
         self.values = np.zeros(n_actions)
-
-    def _calculate_discounted_counts_and_rewards(self):
-        discounted_counts = np.zeros_like(self.counts)
-        discounted_rewards = np.zeros_like(self.values)
-
-        for i in range(len(self.counts)):
-            for s in range(1, self.total_time_steps + 1):
-                discounted_counts[i] += self.gamma**(self.total_time_steps - s) if self.counts[i] >= s else 0
-                discounted_rewards[i] += self.gamma**(self.total_time_steps - s) * self.values[i] if self.counts[i] >= s else 0
-
-        return discounted_counts, discounted_rewards
+        self.discounted_rewards = np.zeros(n_actions)
 
     def get_action(self):
+        epsilon = 1e-8
         if self.counts.min() == 0:
             idx = np.random.choice(np.where(self.counts == 0)[0])
             action = np.zeros(len(self.values))
             action[idx] = 1
         else:
-            discounted_counts, discounted_rewards = self._calculate_discounted_counts_and_rewards()
-            discounted_means = discounted_rewards / discounted_counts
-            nt_gamma = np.sum(discounted_counts)
-            ct = 2 * np.sqrt((self.c * np.log(nt_gamma)) / discounted_counts)
+            discounted_means = self.discounted_rewards / (self.discounted_counts + epsilon)
+            nt_gamma = np.sum(self.discounted_counts)
+            ct_numerator = self.c * np.log(nt_gamma + epsilon)
+            ct_denominator = self.discounted_counts + epsilon
+            ct = 2 * np.sqrt(np.maximum(ct_numerator / ct_denominator, 0))
             action = discounted_means + ct
         return action
 
     def update(self, actions, state):
         self.total_time_steps += 1
+        self.discounted_counts *= self.gamma
+        self.discounted_rewards *= self.gamma
+
         for i, reward in enumerate(state):
             if reward >= 0:
                 self.counts[i] += 1
                 self.values[i] += reward
+
+                self.discounted_counts[i] += 1
+                self.discounted_rewards[i] += reward
             else:
                 self.counts[i] += 0
+
 
 
 class UCBAgent:
