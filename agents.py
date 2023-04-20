@@ -173,17 +173,30 @@ class DiscountedUCBAgent:
         self.values = np.zeros(n_actions)
         self.discounted_rewards = np.zeros(n_actions)
 
+    # def get_action(self):
+    #     epsilon = 1e-8
+    #     if self.counts.min() == 0:
+    #         idx = np.random.choice(np.where(self.counts == 0)[0])
+    #         action = np.zeros(len(self.values))
+    #         action[idx] = 1
+    #     else:
+    #         discounted_means = self.discounted_rewards / (self.discounted_counts + epsilon)
+    #         nt_gamma = np.sum(self.discounted_counts)
+    #         ct_numerator = self.c * np.log(nt_gamma + epsilon)
+    #         ct_denominator = self.discounted_counts + epsilon
+    #         ct = 2 * np.sqrt(np.maximum(ct_numerator / ct_denominator, 0))
+    #         action = discounted_means + ct
+    #     return action
     def get_action(self):
-        epsilon = 1e-8
         if self.counts.min() == 0:
             idx = np.random.choice(np.where(self.counts == 0)[0])
             action = np.zeros(len(self.values))
             action[idx] = 1
         else:
-            discounted_means = self.discounted_rewards / (self.discounted_counts + epsilon)
+            discounted_means = self.discounted_rewards / self.discounted_counts
             nt_gamma = np.sum(self.discounted_counts)
-            ct_numerator = self.c * np.log(nt_gamma + epsilon)
-            ct_denominator = self.discounted_counts + epsilon
+            ct_numerator = self.c * np.log(nt_gamma)
+            ct_denominator = self.discounted_counts
             ct = 2 * np.sqrt(np.maximum(ct_numerator / ct_denominator, 0))
             action = discounted_means + ct
         return action
