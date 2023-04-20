@@ -114,10 +114,10 @@ class LSTM_RNN_Agent:
 
 
 class SlidingWindowUCBAgent:
-    def __init__(self, c=5, window_size=100):
+    def __init__(self, window_size=100):
         self.counts = None
         self.values = None
-        self.c = c
+        self.c = 3
         self.window_size = window_size
         self.recent_rewards = None
         self.recent_counts = None
@@ -158,12 +158,12 @@ class SlidingWindowUCBAgent:
                 self.recent_counts[i].append(0)
 
 class DiscountedUCBAgent:
-    def __init__(self, c=5, gamma=0.9):
+    def __init__(self, gamma=0.9):
         self.counts = None
         self.discounted_counts = None
         self.values = None
         self.discounted_rewards = None
-        self.c = c
+        self.c = 3
         self.gamma = gamma
         self.total_time_steps = 0
 
@@ -173,20 +173,7 @@ class DiscountedUCBAgent:
         self.values = np.zeros(n_actions)
         self.discounted_rewards = np.zeros(n_actions)
 
-    # def get_action(self):
-    #     epsilon = 1e-8
-    #     if self.counts.min() == 0:
-    #         idx = np.random.choice(np.where(self.counts == 0)[0])
-    #         action = np.zeros(len(self.values))
-    #         action[idx] = 1
-    #     else:
-    #         discounted_means = self.discounted_rewards / (self.discounted_counts + epsilon)
-    #         nt_gamma = np.sum(self.discounted_counts)
-    #         ct_numerator = self.c * np.log(nt_gamma + epsilon)
-    #         ct_denominator = self.discounted_counts + epsilon
-    #         ct = 2 * np.sqrt(np.maximum(ct_numerator / ct_denominator, 0))
-    #         action = discounted_means + ct
-    #     return action
+
     def get_action(self):
         if self.counts.min() == 0:
             idx = np.random.choice(np.where(self.counts == 0)[0])
@@ -219,10 +206,10 @@ class DiscountedUCBAgent:
 
 
 class UCBAgent:
-    def __init__(self, c=5):
+    def __init__(self):
         self.counts = None
         self.values = None
-        self.c = c
+        self.c = 3
         self.total_time_steps = 0
 
     def initialize(self, n_actions):

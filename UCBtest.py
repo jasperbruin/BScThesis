@@ -16,7 +16,7 @@ def SWUCBExperiment():
 
     # Find the best sliding window in the training session
     for window_size in range(1, max_window_size + 1):
-        agent = SlidingWindowUCBAgent(c=3, window_size=window_size * 60)
+        agent = SlidingWindowUCBAgent(window_size=window_size * 60)
 
         agent.initialize(env.n_camera)
 
@@ -47,7 +47,7 @@ def SWUCBExperiment():
         total_rewards.append(total_reward)
 
     # Use the best sliding window for testing
-    agent = SlidingWindowUCBAgent(c=3, window_size=best_window_size)
+    agent = SlidingWindowUCBAgent(window_size=best_window_size)
     agent.initialize(env.n_camera)
     env.reset(mode='test')
 
@@ -82,9 +82,9 @@ def SWUCBExperiment():
 def DiscountedUCBExperiment():
     np.random.seed(0)
     env = ROFARS_v1()
-    min_gamma = 0.5
+    min_gamma = 0.9
     max_gamma = 1.0
-    gamma_step = 0.025
+    gamma_step = 0.0025
     best_gamma = min_gamma
     best_reward = -np.inf
 
@@ -93,7 +93,7 @@ def DiscountedUCBExperiment():
 
     # Find the best gamma in the training session
     for gamma in np.arange(min_gamma, max_gamma, gamma_step):
-        agent = DiscountedUCBAgent(c=3, gamma=gamma)
+        agent = DiscountedUCBAgent(gamma=gamma)
         agent.initialize(env.n_camera)
 
         # Training loop
@@ -123,7 +123,7 @@ def DiscountedUCBExperiment():
         total_rewards.append(total_reward)
 
     # Use the best gamma for testing
-    agent = DiscountedUCBAgent(c=5, gamma=best_gamma)
+    agent = DiscountedUCBAgent(gamma=best_gamma)
     agent.initialize(env.n_camera)
     env.reset(mode='test')
 
@@ -155,7 +155,6 @@ def DiscountedUCBExperiment():
     plt.savefig('DiscountedUCB.png')
     plt.show()
 
-
 def SWUCBOpt(agent_type):
     if agent_type == 1:
         print("UCB-1")
@@ -163,8 +162,6 @@ def SWUCBOpt(agent_type):
         print("SW-UCB")
     elif agent_type == 3:
         print("D-UCB")
-
-
 
     np.random.seed(0)
     env = ROFARS_v1()
@@ -176,10 +173,10 @@ def SWUCBOpt(agent_type):
     elif agent_type == 2:
         inp = int(input("Enter the window size: "))
         best_window_size = inp * 60
-        agent = SlidingWindowUCBAgent(c=3, window_size=best_window_size)
+        agent = SlidingWindowUCBAgent(window_size=best_window_size)
     elif agent_type == 3:
         inp = float(input("Enter the gamma: "))
-        agent = DiscountedUCBAgent(c=3, gamma=inp)
+        agent = DiscountedUCBAgent(gamma=inp)
     agent.initialize(env.n_camera)
 
     # Training loop
@@ -203,9 +200,9 @@ def SWUCBOpt(agent_type):
     if agent_type == 1:
         agent = UCBAgent()
     elif agent_type == 2:
-        agent = SlidingWindowUCBAgent(c=3, window_size=best_window_size)
+        agent = SlidingWindowUCBAgent(window_size=best_window_size)
     elif agent_type == 3:
-        agent = DiscountedUCBAgent(c=3, gamma=0.5)
+        agent = DiscountedUCBAgent(gamma=0.5)
     agent.initialize(env.n_camera)
 
     env.reset(mode='test')
@@ -267,30 +264,28 @@ Percentage growth = (Difference / Baseline) x 100 = 0.207 / 0.317 x 100 = 65.3%
 Growth: 65.3%.
 
 
-Run 2 UCB1:
-[total reward]: 0.558                    
+Run 2 UCB1:                                             
 ====== TESTING======
-[total reward]: 0.514
+[total reward]: 0.503
 
-Difference Strong Baseline = Run 2 - Baseline = 0.514 - 0.506 = 0.008
-Percentage growth = (Difference / Baseline) x 100 = 0.008 / 0.506 x 100 = 1.6%
+Difference Strong Baseline = Run 2 - Baseline = 0.503 - 0.506 = -0.003
+Percentage growth = (Difference / Baseline) x 100 = -0.003 / 0.506 x 100 = -0.6%
 
 
-Difference Weak Baseline = Run 2 - Baseline = 0.514 - 0.317 = 0.197
-Percentage growth = (Difference / Baseline) x 100 = 0.197 / 0.317 x 100 = 62.1%
-Growth: 62.1%.
+Difference Weak Baseline = Run 2 - Baseline = 0.503 - 0.317 = 0.186
+Percentage growth = (Difference / Baseline) x 100 = 0.186 / 0.317 x 100 = 58.7%
 
 Run 3 D-UCB:
 ====== TESTING gamma ======
-[total reward]: 0.554
-Best gamma: 0.998999999999999
-Best [total reward]: 0.585
+[total reward]: 0.559
+Best gamma: 0.9974999999999979
+Best [total reward]: 0.586
 
-Difference Strong Baseline = Run 3 - Baseline = 0.554 - 0.506 = 0.048
-Percentage growth = (Difference / Baseline) x 100 = 0.048 / 0.506 x 100 = 9.5%
+Difference Strong Baseline = Run 3 - Baseline = 0.559 - 0.506 = 0.053
+Percentage growth = (Difference / Baseline) x 100 = 0.053 / 0.506 x 100 = 10.5%
 
-Difference Weak Baseline = Run 3 - Baseline = 0.554 - 0.317 = 0.237
-Percentage growth = (Difference / Baseline) x 100 = 0.237 / 0.317 x 100 = 74.7%
+Difference Weak Baseline = Run 3 - Baseline = 0.559 - 0.317 = 0.242
+Percentage growth = (Difference / Baseline) x 100 = 0.242 / 0.317 x 100 = 76.2%
 """
 
 
