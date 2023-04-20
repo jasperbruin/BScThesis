@@ -245,32 +245,31 @@ Baseline:
 
 
 Run 1 SW-UCB:
-TRAINING window size 50 * 60 ===
-[total reward]: 0.558                       
-====== TESTING window size 50 * 60 ======
-[total reward]: 0.528
+== TRAINING===
+[total reward]: 0.561                         
+====== TESTING======
+[total reward]: 0.524
 
-Difference Strong Baseline = Run 1 - Baseline = 0.528 - 0.506 = 0.022
-Percentage growth = (Difference / Baseline) x 100 = 0.022 / 0.506 x 100 = 4.3%
-Growth: 4.3%.
+Difference Strong Baseline = Run 1 - Baseline = 0.524 - 0.506 = 0.018
+Percentage growth = (Difference / Baseline) x 100 = 0.018 / 0.506 x 100 = 3.6%
 
-Difference Weak Baseline = Run 1 - Baseline = 0.528 - 0.317 = 0.211
-Percentage growth = (Difference / Baseline) x 100 = 0.211 / 0.317 x 100 = 66.4%
-Growth: 66.4%. 
+Difference Weak Baseline = Run 1 - Baseline = 0.524 - 0.317 = 0.207
+Percentage growth = (Difference / Baseline) x 100 = 0.207 / 0.317 x 100 = 65.3%
+Growth: 65.3%.
 
 
 Run 2 UCB1:
-[total reward]: 0.449                         
+[total reward]: 0.558                    
 ====== TESTING======
-[total reward]: 0.39
+[total reward]: 0.514
 
-Difference Strong Baseline = Run 2 - Baseline = 0.39 - 0.506 = -0.116
-Percentage growth = (Difference / Baseline) x 100 = -0.116 / 0.506 x 100 = -22.9%
-Growth: -22.9%.
+Difference Strong Baseline = Run 2 - Baseline = 0.514 - 0.506 = 0.008
+Percentage growth = (Difference / Baseline) x 100 = 0.008 / 0.506 x 100 = 1.6%
 
-Difference Weak Baseline = Run 2 - Baseline = 0.39 - 0.317 = 0.073
-Percentage growth = (Difference / Baseline) x 100 = 0.073 / 0.317 x 100 = 23.0%
-Growth: 23.0%.
+
+Difference Weak Baseline = Run 2 - Baseline = 0.514 - 0.317 = 0.197
+Percentage growth = (Difference / Baseline) x 100 = 0.197 / 0.317 x 100 = 62.1%
+Growth: 62.1%.
 
 Run 3 D-UCB:
 ====== TESTING gamma ======

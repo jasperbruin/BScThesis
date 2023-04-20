@@ -130,8 +130,11 @@ class SlidingWindowUCBAgent:
         self.recent_counts = [deque(maxlen=self.window_size) for _ in range(n_actions)]
 
     def get_action(self):
-        if self.counts.min() == 0:
-            action = np.random.choice(np.where(self.counts == 0)[0])
+        if self.counts.min == 0:
+        # action = np.random. choice(np.where(self.counts == 0) [0])
+            idx = np.random.choice(np.where(self.counts == 0)[0])
+            action = np.zeros(len(self.values))
+            action[idx] = 1
         else:
             min_time_steps = min(self.total_time_steps, self.window_size)
             recent_counts_sum = np.array([sum(counts) for counts in self.recent_counts])
@@ -152,8 +155,8 @@ class SlidingWindowUCBAgent:
                 avg_reward = sum(self.recent_rewards[i]) / sum(self.recent_counts[i])
                 self.values[i] = avg_reward
             else:
-                self.counts[i] += 1
-                self.recent_counts[i].append(0)
+                self.counts[i] += 0
+                # self.recent_counts[i].append(0)
 
 class DiscountedUCBAgent:
     def __init__(self, c=5, gamma=0.99):
@@ -168,10 +171,13 @@ class DiscountedUCBAgent:
         self.values = np.zeros(n_actions)
 
     def get_action(self):
-        if self.counts.min() == 0:
-            action = np.random.choice(np.where(self.counts == 0)[0])
+        if self.counts.min == 0:
+        # action = np.random. choice(np.where(self.counts == 0) [0])
+            idx = np.random.choice(np.where(self.counts == 0)[0])
+            action = np.zeros(len(self.values))
+            action[idx] = 1
         else:
-            ucb_values = self.values + self.c * np.sqrt(np.log(self.total_time_steps) / self.counts)
+            ucb_values = self.values + self.c * np.sqrt(2 * np.log(self.total_time_steps) / self.counts)
             action = ucb_values
         return action
 
@@ -183,7 +189,7 @@ class DiscountedUCBAgent:
                 alpha = 1 / self.counts[i]
                 self.values[i] = (1 - alpha) * self.values[i] + alpha * reward * pow(self.gamma, self.total_time_steps - self.counts[i])
             else:
-                self.counts[i] += 1
+                self.counts[i] += 0
 
 
 class UCBAgent:
@@ -198,10 +204,13 @@ class UCBAgent:
         self.values = np.zeros(n_actions)
 
     def get_action(self):
-        if self.counts.min() == 0:
-            action = np.random.choice(np.where(self.counts == 0)[0])
+        if self.counts.min == 0:
+        # action = np.random. choice(np.where(self.counts == 0) [0])
+            idx = np.random.choice(np.where(self.counts == 0)[0])
+            action = np.zeros(len(self.values))
+            action[idx] = 1
         else:
-            ucb_values = self.values + self.c * np.sqrt(np.log(self.total_time_steps) / self.counts)
+            ucb_values = self.values + self.c * np.sqrt(2 * np.log(self.total_time_steps) / self.counts)
             action = ucb_values
         return action
 
@@ -212,4 +221,4 @@ class UCBAgent:
                 self.counts[i] += 1
                 self.values[i] = self.values[i] + (1 / self.counts[i]) * (reward - self.values[i])
             else:
-                self.counts[i] += 1
+                self.counts[i] += 0
