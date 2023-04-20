@@ -250,7 +250,7 @@ Baseline:
 [total reward]: 0.506
 
 
-Run 1 SW-UCB:
+Run 1 SW-UCB best window size = 50:
 == TRAINING===
 [total reward]: 0.561                         
 ====== TESTING======
@@ -277,15 +277,15 @@ Percentage growth = (Difference / Baseline) x 100 = 0.186 / 0.317 x 100 = 58.7%
 
 Run 3 D-UCB:
 ====== TESTING gamma ======
-[total reward]: 0.559
+[total reward]: 0.555
 Best gamma: 0.9974999999999979
-Best [total reward]: 0.586
+Best [total reward]: 0.583
 
-Difference Strong Baseline = Run 3 - Baseline = 0.559 - 0.506 = 0.053
-Percentage growth = (Difference / Baseline) x 100 = 0.053 / 0.506 x 100 = 10.5%
+Difference Strong Baseline = Run 3 - Baseline = 0.555 - 0.506 = 0.049
+Percentage growth = (Difference / Baseline) x 100 = 0.049 / 0.506 x 100 = 9.7%
 
-Difference Weak Baseline = Run 3 - Baseline = 0.559 - 0.317 = 0.242
-Percentage growth = (Difference / Baseline) x 100 = 0.242 / 0.317 x 100 = 76.2%
+Difference Weak Baseline = Run 3 - Baseline = 0.555 - 0.317 = 0.238
+Percentage growth = (Difference / Baseline) x 100 = 0.238 / 0.317 x 100 = 75.1%
 """
 
 
