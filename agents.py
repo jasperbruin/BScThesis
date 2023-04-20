@@ -165,10 +165,13 @@ class DiscountedUCBAgent:
         self.c = c
         self.gamma = gamma
         self.total_time_steps = 0
+        self.rewards_history = None
 
     def initialize(self, n_actions):
         self.counts = np.zeros(n_actions)
         self.values = np.zeros(n_actions)
+        self.rewards_history = [deque() for _ in range(n_actions)]
+
 
     def get_action(self):
         if self.counts.min == 0:
@@ -182,12 +185,35 @@ class DiscountedUCBAgent:
         return action
 
     def update(self, actions, state):
+        """
+        The previous implementation of the update function for D-UCB calculated
+        the discounted reward using (self.total_time_steps - self.counts[i]).
+        However, this may not be the correct way to apply the discount factor.
+        Instead, you can maintain a list of all rewards received for each action
+        and apply the discount factor based on the time steps since the reward was received.
+
+        But this does drop the performance of the agent significantly because:
+        1. Immediate rewards are more significant:  The problem could be more
+        focused on immediate rewards rather than long-term rewards.
+
+        2. Non-stationary environment: If the environment is non-stationary,
+        meaning the reward distribution changes over time, the D-UCB agent's
+        performance could suffer due to its focus on long-term rewards.
+
+        3. Exploration-exploitation balance: We can try different values of c
+        """
+
         self.total_time_steps += 1
         for i, reward in enumerate(state):
             if reward >= 0:
                 self.counts[i] += 1
-                alpha = 1 / self.counts[i]
-                self.values[i] = (1 - alpha) * self.values[i] + alpha * reward * pow(self.gamma, self.total_time_steps - self.counts[i])
+                self.rewards_history[i].append((self.total_time_steps, reward))
+
+                discounted_rewards = 0
+                for t, r in self.rewards_history[i]:
+                    discounted_rewards += r * pow(self.gamma, self.total_time_steps - t)
+
+                self.values[i] = discounted_rewards / self.counts[i]
             else:
                 self.counts[i] += 0
 
