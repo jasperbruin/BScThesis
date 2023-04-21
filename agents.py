@@ -130,7 +130,7 @@ class SlidingWindowUCBAgent:
         self.recent_counts = [deque(maxlen=self.window_size) for _ in range(n_actions)]
 
     def get_action(self):
-        if self.counts.min == 0:
+        if self.counts.min() == 0:
             idx = np.random.choice(np.where(self.counts == 0)[0])
             action = np.zeros(len(self.values))
             action[idx] = 1
@@ -217,7 +217,7 @@ class UCBAgent:
         self.values = np.zeros(n_actions)
 
     def get_action(self):
-        if self.counts.min == 0:
+        if self.counts.min() == 0:
         # action = np.random. choice(np.where(self.counts == 0) [0])
             idx = np.random.choice(np.where(self.counts == 0)[0])
             action = np.zeros(len(self.values))

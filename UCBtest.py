@@ -48,7 +48,7 @@ def SWUCBExperiment():
         total_rewards.append(total_reward)
 
     # Use the best sliding window for testing
-    agent = SlidingWindowUCBAgent(window_size=best_window_size)
+    agent = SlidingWindowUCBAgent(window_size=best_window_size * 60)
     agent.initialize(env.n_camera)
     env.reset(mode='test')
 
@@ -238,9 +238,9 @@ def timeexperiment(agent_type):
         agent = UCBAgent()
     elif agent_type == 2:
         best_window_size = 50 * 60
-        agent = SlidingWindowUCBAgent(window_size=best_window_size)
+        agent = SlidingWindowUCBAgent(window_size=best_window_size * 60)
     elif agent_type == 3:
-        agent = DiscountedUCBAgent(gamma=0.9974999999999979)
+        agent = DiscountedUCBAgent(gamma=0.999)
     agent.initialize(env.n_camera)
 
     env.reset(mode='train')
@@ -320,7 +320,7 @@ Baseline:
 
 Run 1 SW-UCB best window size = 50 * 60:
 == TRAINING===
-[total reward]: 0.561                         
+[total reward]: 0.563                      
 ====== TESTING======
 [total reward]: 0.524
 
@@ -334,14 +334,13 @@ Growth: 65.3%.
 
 Run 2 UCB1:                                             
 ====== TESTING======
-[total reward]: 0.503
+[total reward]: 0.499
 
-Difference Strong Baseline = Run 2 - Baseline = 0.503 - 0.506 = -0.003
-Percentage growth = (Difference / Baseline) x 100 = -0.003 / 0.506 x 100 = -0.6%
+Difference Strong Baseline = Run 2 - Baseline = 0.499 - 0.506 = -0.007
+Percentage growth = (Difference / Baseline) x 100 = -0.007 / 0.506 x 100 = -1.4%
 
-
-Difference Weak Baseline = Run 2 - Baseline = 0.503 - 0.317 = 0.186
-Percentage growth = (Difference / Baseline) x 100 = 0.186 / 0.317 x 100 = 58.7%
+Difference Weak Baseline = Run 2 - Baseline = 0.499 - 0.317 = 0.182
+Percentage growth = (Difference / Baseline) x 100 = 0.182 / 0.317 x 100 = 57.4%
 
 Run 3 D-UCB:
 ====== TESTING gamma ======
