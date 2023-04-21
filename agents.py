@@ -3,6 +3,7 @@
 # date: 23/02/2023
 
 
+
 from collections import deque
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
@@ -11,6 +12,8 @@ from tensorflow.keras.regularizers import L1L2
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import LSTM, Dense, Input
 import numpy as np
+
+
 
 class baselineAgent:
 
@@ -101,15 +104,14 @@ class DiscountedUCBAgent:
             action[idx] = 1
         else:
             discounted_means = self.discounted_rewards / self.discounted_counts
-            nt_gamma = np.sum(self.discounted_counts)
-            ct_numerator = self.c * np.log(nt_gamma)
+            ct_numerator = 2 * np.log(self.total_time_steps)
             ct_denominator = self.discounted_counts
-            ct = 2 * np.sqrt(np.maximum(ct_numerator / ct_denominator, 0))
+            ct = self.c * np.sqrt(np.maximum(ct_numerator / ct_denominator, 0))
             action = discounted_means + ct
         return action
 
     def update(self, actions, state):
-        self.total_time_steps += 1
+        self.total_time_steps = self.gamma*self.total_time_steps + 1
         self.discounted_counts *= self.gamma
         self.discounted_rewards *= self.gamma
 
@@ -122,6 +124,7 @@ class DiscountedUCBAgent:
                 self.discounted_rewards[i] += reward
             else:
                 self.counts[i] += 0
+
 
 class UCBAgent:
     def __init__(self):
@@ -185,3 +188,4 @@ class LSTM_Agent(Model):
             else:
                 self.records[i].append(s)
         return imputed_state
+

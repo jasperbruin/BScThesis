@@ -10,11 +10,11 @@ env = ROFARS_v1()
 best_total_reward = -np.inf
 
 input_size = env.n_camera
-hidden_size = 32
+hidden_size = 64
 output_size = env.n_camera
 lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
 
-optimizer = Adam(lr=0.0001)
+optimizer = Adam(lr=0.00001)
 lstm_agent.compile(optimizer, loss='mse')
 
 # Training
@@ -75,3 +75,5 @@ for t in tqdm(range(env.length), initial=2):
 
 print(f'====== TESTING ======')
 print('[total reward]:', np.mean(rewards))
+
+
