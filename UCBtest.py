@@ -83,9 +83,9 @@ def SWUCBExperiment():
 def DiscountedUCBExperiment():
     np.random.seed(0)
     env = ROFARS_v1()
-    min_gamma = 0.9
+    min_gamma = 0.99
     max_gamma = 1.0
-    gamma_step = 0.0025
+    gamma_step = 0.00025
     best_gamma = min_gamma
     best_reward = -np.inf
 
@@ -284,14 +284,14 @@ if __name__ == '__main__':
         elif inp2 == 2:
             SWUCBOpt(3)
     elif inp == 4:
-        ucb1_inference_times = timeexperiment(1)
         sw_ucb_inference_times = timeexperiment(2)
+        ucb1_inference_times = timeexperiment(1)
         d_ucb_inference_times = timeexperiment(3)
 
         # Plot the average inference times for each agent as a bar plot
-        agents = ['UCB-1', 'SW-UCB', 'D-UCB']
-        avg_inference_times = [ucb1_inference_times,
-                               sw_ucb_inference_times,
+        agents = ['SW-UCB', 'UCB-1', 'D-UCB']
+        avg_inference_times = [sw_ucb_inference_times,
+                               ucb1_inference_times,
                                d_ucb_inference_times]
 
         print(avg_inference_times)
@@ -304,18 +304,12 @@ if __name__ == '__main__':
         plt.xlabel('Agent', fontsize=12)
         plt.ylabel('Average Inference Time (s)', fontsize=10)
         plt.title(
-            'Average Inference Time for UCB-1, SW-UCB, and D-UCB during Training',
+            'Average Inference Time for SW-UCB, UCB-1, and D-UCB during Training',
             fontsize=10)
         plt.grid(axis='y', linestyle='--', alpha=0.7)
         plt.tight_layout()
         plt.savefig('UCB_AverageInferenceTime_Training_BW.png')
         plt.show()
-
-
-
-
-
-
 
 """
 Baseline:
@@ -323,7 +317,7 @@ Baseline:
 [total reward]: 0.506
 
 
-Run 1 SW-UCB best window size = 50:
+Run 1 SW-UCB best window size = 50 * 60:
 == TRAINING===
 [total reward]: 0.561                         
 ====== TESTING======
@@ -360,5 +354,12 @@ Percentage growth = (Difference / Baseline) x 100 = 0.049 / 0.506 x 100 = 9.7%
 Difference Weak Baseline = Run 3 - Baseline = 0.555 - 0.317 = 0.238
 Percentage growth = (Difference / Baseline) x 100 = 0.238 / 0.317 x 100 = 75.1%
 """
+
+"""
+Time experiment: Average inference time for each agent during training
+[6.7903322202188e-06, 0.00015759250080143964, 1.392593538319623e-05]
+UCB-1 SW-UCB D-UCB
+"""
+
 
 
