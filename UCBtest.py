@@ -166,6 +166,8 @@ def SWUCBOpt(agent_type):
 
     np.random.seed(0)
     env = ROFARS_v1()
+    best_window_size = 0
+    best_gamma = 0
 
 
     """TRAINING"""
@@ -176,13 +178,12 @@ def SWUCBOpt(agent_type):
         best_window_size = inp * 60
         agent = SlidingWindowUCBAgent(window_size=best_window_size)
     elif agent_type == 3:
-        inp = float(input("Enter the gamma: "))
-        agent = DiscountedUCBAgent(gamma=inp)
+        best_gamma = float(input("Enter the gamma: "))
+        agent = DiscountedUCBAgent(gamma=best_gamma)
     agent.initialize(env.n_camera)
 
     # Training loop
     env.reset(mode='train')
-
     for t in tqdm(range(env.length), initial=2):
         action = agent.get_action()
         reward, state, stop = env.step(action)
@@ -203,7 +204,7 @@ def SWUCBOpt(agent_type):
     elif agent_type == 2:
         agent = SlidingWindowUCBAgent(window_size=best_window_size)
     elif agent_type == 3:
-        agent = DiscountedUCBAgent(gamma=0.5)
+        agent = DiscountedUCBAgent(gamma=best_gamma)
     agent.initialize(env.n_camera)
 
     env.reset(mode='test')
@@ -344,15 +345,14 @@ Percentage growth = (Difference / Baseline) x 100 = 0.186 / 0.317 x 100 = 58.7%
 
 Run 3 D-UCB:
 ====== TESTING gamma ======
-[total reward]: 0.555
-Best gamma: 0.9974999999999979
-Best [total reward]: 0.583
+[total reward]: 0.559
+Best gamma: 0.998999999999999
 
-Difference Strong Baseline = Run 3 - Baseline = 0.555 - 0.506 = 0.049
-Percentage growth = (Difference / Baseline) x 100 = 0.049 / 0.506 x 100 = 9.7%
+Difference Strong Baseline = Run 3 - Baseline = 0.559 - 0.506 = 0.053
+Percentage growth = (Difference / Baseline) x 100 = 0.053 / 0.506 x 100 = 10.5%
 
-Difference Weak Baseline = Run 3 - Baseline = 0.555 - 0.317 = 0.238
-Percentage growth = (Difference / Baseline) x 100 = 0.238 / 0.317 x 100 = 75.1%
+Difference Weak Baseline = Run 3 - Baseline = 0.559 - 0.317 = 0.242
+Percentage growth = (Difference / Baseline) x 100 = 0.242 / 0.317 x 100 = 76.2%
 """
 
 """

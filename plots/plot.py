@@ -9,7 +9,7 @@ def add_text_label(ax, x, y, value, color='black', fontweight='bold', fontsize=1
 baseline_strong = 0.506
 baseline_weak = 0.317
 runs = ['SW-UCB', 'UCB-1', 'D-UCB']
-test_rewards = [0.524, 0.503, 0.555]
+test_rewards = [0.524, 0.503, 0.559]
 
 # Calculate percentage growths
 growth_strong = [(reward - baseline_strong) / baseline_strong * 100 for reward in test_rewards]
