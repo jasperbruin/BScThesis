@@ -10,11 +10,11 @@ env = ROFARS_v1()
 best_total_reward = -np.inf
 
 input_size = env.n_camera
-hidden_size = 16
+hidden_size = 32
 output_size = env.n_camera
 lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
 
-optimizer = Adam(lr=0.001)
+optimizer = Adam(lr=0.0001)
 lstm_agent.compile(optimizer, loss='mse')
 
 # Training
@@ -40,7 +40,7 @@ states = np.array(states)
 actions = np.array(actions)
 
 states = states.reshape((states.shape[0], 1, states.shape[1]))
-lstm_agent.fit(states, actions, epochs=10, verbose=1)
+lstm_agent.fit(states, actions, epochs=100, verbose=1)
 
 # Test the LSTM agent
 env.reset(mode='test')

@@ -94,7 +94,6 @@ class DiscountedUCBAgent:
         self.values = np.zeros(n_actions)
         self.discounted_rewards = np.zeros(n_actions)
 
-
     def get_action(self):
         if self.counts.min() == 0:
             idx = np.random.choice(np.where(self.counts == 0)[0])
