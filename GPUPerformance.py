@@ -5,7 +5,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from scipy.interpolate import interp1d
-from scipy.interpolate import UnivariateSpline
+from sklearn.preprocessing import MinMaxScaler
+import itertools
 
 device = torch.device("mps")
 
@@ -76,16 +77,19 @@ class baselineAgent:
         return action
 
 class LSTM_Agent(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_size, hidden_size, output_size, dropout_rate=0.5):
         super(LSTM_Agent, self).__init__()
         self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
+        self.dropout = nn.Dropout(dropout_rate)
         self.dense = nn.Linear(hidden_size, output_size)
         self.softmax = nn.Softmax(dim=1)
 
         self.records = [[] for _ in range(input_size)]
+        self.scaler = MinMaxScaler()
 
     def forward(self, inputs):
         x, _ = self.lstm(inputs)
+        x = self.dropout(x)  # Apply dropout
         x = x[:, -1, :]
         x = self.dense(x)
         x = self.softmax(x)
@@ -93,6 +97,11 @@ class LSTM_Agent(nn.Module):
 
     def get_action(self, state):
         imputed_state = self.impute_missing_values(state)
+
+        # Apply feature scaling
+        imputed_state = self.scaler.fit_transform(
+            imputed_state.reshape(1, -1)).reshape(-1)
+
         state = np.expand_dims(imputed_state, axis=0)
         state = np.expand_dims(state, axis=1)
         state = torch.tensor(state, dtype=torch.float32, device=device)
@@ -114,7 +123,6 @@ class LSTM_Agent(nn.Module):
 
         x = np.arange(len(self.records[index]))
         y = np.array(self.records[index])
-        spline_order = 3
         interpolator = interp1d(x, y, kind='linear', fill_value='extrapolate')
         return float(interpolator(len(self.records[index])))
 
@@ -125,13 +133,15 @@ def evaluateUCB():
     lr = float(input('Learning rate: '))
     epochs = int(input('Epochs: '))
     hidden_size = int(input('Hidden size: '))
+    dropout_rate = float(input('Dropout rate: '))
+    weight_decay = float(input('Weight decay: '))
 
     env = ROFARS_v1()
     best_total_reward = -np.inf
     input_size = env.n_camera
     output_size = env.n_camera
-    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size).to(device)
-    optimizer = optim.Adam(lstm_agent.parameters(), lr=lr)
+    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size, dropout_rate=dropout_rate).to(device)
+    optimizer = optim.Adam(lstm_agent.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = nn.MSELoss()
 
     # Training
@@ -208,17 +218,14 @@ def evaluateUCB():
     print('[total reward]:', f'{np.mean(rewards):.3f}')
 
 
-def evaluateBaseline():
-    lr = float(input('Learning rate: '))
-    epochs = int(input('Epochs: '))
-    hidden_size = int(input('Hidden size: '))
+def evaluateBaseline(lr, epochs, hidden_size, dropout_rate, weight_decay):
 
     env = ROFARS_v1()
     best_total_reward = -np.inf
     input_size = env.n_camera
     output_size = env.n_camera
-    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size).to(device)
-    optimizer = optim.Adam(lstm_agent.parameters(), lr=lr)
+    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size, dropout_rate=dropout_rate).to(device)
+    optimizer = optim.Adam(lstm_agent.parameters(), lr=lr, weight_decay=weight_decay)
     criterion = nn.MSELoss()
 
 
@@ -290,12 +297,50 @@ def evaluateBaseline():
     print(f'====== TESTING ======')
     print('[total reward]:', f'{np.mean(rewards):.3f}')
 
+    return total_reward
+
+
+def grid_search():
+    learning_rates = [0.001, 0.01, 0.1]
+    epochs_list = [100, 500, 1000]
+    hidden_sizes = [32, 64, 128]
+    dropout_rates = [0.1, 0.3, 0.5]
+    weight_decays = [1e-4, 1e-3, 1e-2]
+
+    best_total_reward = -np.inf
+    best_params = None
+
+    for lr, epochs, hidden_size, dropout_rate, weight_decay in itertools.product(
+            learning_rates, epochs_list, hidden_sizes, dropout_rates,
+            weight_decays):
+        print(
+            f'Testing parameters: lr={lr}, epochs={epochs}, hidden_size={hidden_size}, dropout_rate={dropout_rate}, weight_decay={weight_decay}')
+        total_reward = evaluateBaseline(lr, epochs, hidden_size, dropout_rate,
+                                        weight_decay)
+
+        if total_reward > best_total_reward:
+            best_total_reward = total_reward
+            best_params = (lr, epochs, hidden_size, dropout_rate, weight_decay)
+            print(
+                f'New best total reward: {best_total_reward}, with parameters: {best_params}')
+
+    return best_params
+
 if __name__ == '__main__':
-    inp = int(input('1. UCB\n2. Baseline\n'))
+    inp = int(input('1. Baseline\n2. UCB'))
     if inp == 1:
-        evaluateUCB()
+        inp2 = int(input('\n1. Grid search\n2. Random search'))
+        if inp2 == 1:
+            best_params = grid_search()
+            print(
+                f'Optimal parameters: lr={best_params[0]}, epochs={best_params[1]}, hidden_size={best_params[2]}, dropout_rate={best_params[3]}, weight_decay={best_params[4]}')
+            # Train and test the model with the optimal parameters
+            evaluateBaseline(*best_params)
+        elif inp2 == 2:
+            evaluateBaseline()
     elif inp == 2:
-        evaluateBaseline()
+        evaluateUCB()
+
 
 """
 Run 1: baseline
@@ -308,8 +353,12 @@ Loss: 0.968
 ====== TESTING ======
 [total reward]: 0.430
 
+Run2: 
+Learning rate: >? 0.001
+Epochs: >? 2400
+Hidden size: >? 64
+Dropout rate: >? 0.5
+Weight decay: >? 0.0001
 
-
-Run 2: UCB
 
 """
