@@ -1,14 +1,7 @@
 # agent script for 'Resource Optimization for Facial Recognition Systems (ROFARS)' project
 # author: Cyril Hsu @ UvA-MNS
 # date: 23/02/2023
-
-
-
 from collections import deque
-import tensorflow as tf
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.regularizers import L1L2
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import LSTM, Dense, Input
 import numpy as np

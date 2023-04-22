@@ -18,7 +18,6 @@ def SWUCBExperiment():
     # Find the best sliding window in the training session
     for window_size in range(1, max_window_size + 1):
         agent = SlidingWindowUCBAgent(window_size=window_size * 60)
-
         agent.initialize(env.n_camera)
 
         # Training loop
