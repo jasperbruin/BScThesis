@@ -3,7 +3,7 @@
 # date: 23/02/2023
 from collections import deque
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import LSTM, Dense, Input
+from tensorflow.keras.layers import LSTM, Dense, Input, GRU
 import numpy as np
 
 
@@ -171,6 +171,7 @@ class LSTM_Agent(Model):
         state = np.expand_dims(imputed_state, axis=0)
         state = np.expand_dims(state, axis=1)
         action = self.model.predict(state)
+        print(action[0])
         return action[0]
 
     def impute_missing_values(self, state):
@@ -182,3 +183,29 @@ class LSTM_Agent(Model):
                 self.records[i].append(s)
         return imputed_state
 
+
+class GRUAgent(Model):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(GRUAgent, self).__init__()
+        self.gru = GRU(hidden_size, return_sequences=False)
+        self.dense = Dense(output_size, activation='sigmoid')
+        self.input_layer = Input(shape=(1, input_size))
+        self.output_layer = self.dense(self.gru(self.input_layer))
+        self.model = Model(self.input_layer, self.output_layer)
+
+        self.records = [[] for _ in range(input_size)]
+
+    def get_action(self, state):
+        state = np.expand_dims(state, axis=0)
+        state = np.expand_dims(state, axis=1)
+        action = self.model.predict(state)
+        return action[0]
+
+    def impute_missing_values(self, state):
+        imputed_state = np.copy(state)
+        for i, s in enumerate(state):
+            if s == -1:
+                imputed_state[i] = np.mean(self.records[i]) if len(self.records[i]) > 0 else 0
+            else:
+                self.records[i].append(s)
+        return imputed_state
