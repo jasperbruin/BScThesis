@@ -70,41 +70,53 @@ class LSTM_Agent(nn.Module):
         interpolator = interp1d(x, y, kind='linear', fill_value='extrapolate')
         return float(interpolator(len(self.records[index])))
 
+    def train_lstm_agent(self, dataloader, criterion, optimizer, epochs):
+        self.train()
+        for epoch in range(epochs):
+            running_loss = 0.0
+            for states, actions in dataloader:
+                optimizer.zero_grad()
+                predictions = self(states)
+                loss = criterion(predictions, actions)
+                loss.backward()
+                optimizer.step()
+                running_loss += loss.item()
+            print(f'Epoch {epoch + 1}, Loss: {running_loss / len(dataloader):.3f}')
 
-
-
-def train_lstm_agent(agent, dataloader, criterion, optimizer, epochs):
-    agent.train()
-    for epoch in range(epochs):
+    def test_lstm_agent(self, dataloader, criterion):
+        self.eval()
         running_loss = 0.0
-        for states, actions in dataloader:
-            optimizer.zero_grad()
-            predictions = agent(states)
-            loss = criterion(predictions, actions)
-            loss.backward()
-            optimizer.step()
-            running_loss += loss.item()
-        print(f'Epoch {epoch + 1}, Loss: {running_loss / len(dataloader):.3f}')
+        with torch.no_grad():
+            for states, actions in dataloader:
+                predictions = self(states)
+                loss = criterion(predictions, actions)
+                running_loss += loss.item()
+        return running_loss / len(dataloader)
 
 
-def test_lstm_agent(agent, env):
-    env.reset(mode='test')
-    agent.eval()
-    rewards = []
 
+
+def create_training_traces(env, mode='train'):
+    # Training
+    env.reset(mode)
+    baseline_agent = baselineAgent()
+    states, actions = [], []
+
+    # Generate training traces from the Baseline agent
     init_action = np.random.rand(env.n_camera)
-    reward, state, action = env.step(init_action)
+    reward, state, stop = env.step(init_action)
 
     for t in tqdm(range(env.length), initial=2):
-        action = agent.get_action(state)
+        action = baseline_agent.get_action(state)
         reward, state, stop = env.step(action)
 
-        rewards.append(reward)
-
+        states.append(state)
+        actions.append(action)
         if stop:
             break
 
-    return np.mean(rewards)
+    return states, actions
+
 
 
 def evaluateBaseline():
@@ -125,44 +137,39 @@ def evaluateBaseline():
     else:
         criterion = nn.L1Loss()
 
-    # Training
-    env.reset(mode='train')
-    baseline_agent = baselineAgent()
-    states, actions = [], []
-
-    # Generate training traces from the Baseline agent
-    init_action = np.random.rand(env.n_camera)
-    reward, state, stop = env.step(init_action)
-
-    for t in tqdm(range(env.length), initial=2):
-        action = baseline_agent.get_action(state)
-        reward, state, stop = env.step(action)
-
-        states.append(state)
-        actions.append(action)
-        if stop:
-            break
+    states, actions = create_training_traces(env, mode='train')
 
     # Train the LSTM agent with the training traces
     states = np.array(states)
     actions = np.array(actions)
-
-
-
     states = states.reshape((states.shape[0], 1, states.shape[1]))
     states_tensor = torch.tensor(states, dtype=torch.float32).to(device)
     actions_tensor = torch.tensor(actions, dtype=torch.float32).to(device)
 
     train_dataset = TensorDataset(states_tensor, actions_tensor)
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    train_lstm_agent(lstm_agent, train_dataloader, criterion, optimizer, epochs)
+    lstm_agent.train_lstm_agent(train_dataloader, criterion, optimizer, epochs)
 
 
+    states, actions = create_training_traces(env, mode='test')
 
-    # Test the LSTM agent
-    test_reward = test_lstm_agent(lstm_agent, env)
-    print(f'====== TESTING ======')
-    print('[total reward]:', f'{test_reward:.3f}')
+    # Test the LSTM agent with the testing traces
+    states = np.array(states)
+    actions = np.array(actions)
+
+    states = states.reshape((states.shape[0], 1, states.shape[1]))
+    states_tensor = torch.tensor(states, dtype=torch.float32).to(device)
+    actions_tensor = torch.tensor(actions, dtype=torch.float32).to(device)
+
+    test_dataset = TensorDataset(states_tensor, actions_tensor)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+
+    test_loss = lstm_agent.test_lstm_agent(test_dataloader, criterion)
+    total_reward = env.get_total_reward()
+    print(f'=== TRAINING===')
+    print('[total reward]:', total_reward)
+    print(f'[test Loss]: {test_loss:.3f}')
+
 
 if __name__ == '__main__':
     evaluateBaseline()
