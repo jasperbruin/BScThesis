@@ -154,7 +154,7 @@ class LSTM_Agent(Model):
     def __init__(self, input_size, hidden_size, output_size):
         super(LSTM_Agent, self).__init__()
         self.lstm = LSTM(hidden_size, return_sequences=False)
-        self.dense = Dense(output_size, activation='softmax')
+        self.dense = Dense(output_size, activation='linear')
         self.input_layer = Input(shape=(1, input_size))
         self.output_layer = self.dense(self.lstm(self.input_layer))
         self.model = Model(self.input_layer, self.output_layer)

@@ -126,11 +126,13 @@ def evaluateBaseline():
     batch_size = int(input('Batch size: '))
     loss_function = int(input('Loss function (1: MSE, 2: MAE): '))
 
+
     env = ROFARS_v1()
     input_size = env.n_camera
     output_size = env.n_camera
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size).to(device)
     optimizer = optim.Adam(lstm_agent.parameters(), lr=lr)
+    best_total_reward = -np.inf
 
     if loss_function == 1:
         criterion = nn.MSELoss()
@@ -138,8 +140,6 @@ def evaluateBaseline():
         criterion = nn.L1Loss()
 
     states, actions = create_training_traces(env, mode='train')
-
-    # Train the LSTM agent with the training traces
     states = np.array(states)
     actions = np.array(actions)
     states = states.reshape((states.shape[0], 1, states.shape[1]))
@@ -148,27 +148,47 @@ def evaluateBaseline():
 
     train_dataset = TensorDataset(states_tensor, actions_tensor)
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    lstm_agent.train_lstm_agent(train_dataloader, criterion, optimizer, epochs)
 
+    lstm_agent.train_lstm_agent(train_dataloader, criterion, optimizer, epochs=epochs)
 
-    states, actions = create_training_traces(env, mode='test')
+    # Test the LSTM agent
+    env.reset(mode='test')
 
-    # Test the LSTM agent with the testing traces
-    states = np.array(states)
-    actions = np.array(actions)
+    # give random scores as the initial action
+    init_action = np.random.rand(env.n_camera)
+    reward, state, stop = env.step(init_action)
 
-    states = states.reshape((states.shape[0], 1, states.shape[1]))
-    states_tensor = torch.tensor(states, dtype=torch.float32).to(device)
-    actions_tensor = torch.tensor(actions, dtype=torch.float32).to(device)
+    for t in tqdm(range(env.length), initial=2):
+        action = lstm_agent.get_action(state)
+        reward, state, stop = env.step(action)
 
-    test_dataset = TensorDataset(states_tensor, actions_tensor)
-    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+        if stop:
+            break
 
-    test_loss = lstm_agent.test_lstm_agent(test_dataloader, criterion)
     total_reward = env.get_total_reward()
-    print(f'=== TRAINING===')
-    print('[total reward]:', total_reward)
-    print(f'[test Loss]: {test_loss:.3f}')
+    if total_reward > best_total_reward:
+        best_total_reward = total_reward
+
+    print(f'=== TRAINING ===')
+    print('[total reward]:', best_total_reward)
+
+    # Testing
+    env.reset(mode='test')
+
+    # give random scores as the initial action
+    init_action = np.random.rand(env.n_camera)
+    reward, state, stop = env.step(init_action)
+
+    for t in tqdm(range(env.length), initial=2):
+        action = lstm_agent.get_action(state)
+        reward, state, stop = env.step(action)
+
+        if stop:
+            break
+
+    print(f'====== TESTING ======')
+    print('[total reward]:', env.get_total_reward())
+
 
 
 if __name__ == '__main__':
