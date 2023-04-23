@@ -36,7 +36,6 @@ class LSTM_Agent(nn.Module):
         super(LSTM_Agent, self).__init__()
         self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
         self.dense = nn.Linear(hidden_size, output_size)
-        self.softmax = nn.Softmax(dim=1)
 
         self.records = [[] for _ in range(input_size)]
 
@@ -44,7 +43,6 @@ class LSTM_Agent(nn.Module):
         x, _ = self.lstm(inputs)
         x = x[:, -1, :]
         x = self.dense(x)
-        x = self.softmax(x)
         return x
 
     def get_action(self, state):
@@ -168,7 +166,7 @@ if __name__ == '__main__':
 
 
 """
-Run 1: baseline
+Run 1:
 Learning rate: >? 0.001
 Epochs: >? 2400
 Hidden size: >? 64
@@ -176,4 +174,12 @@ Loss: 0.968
 [total reward]: 0.440                      
 ====== TESTING ======
 [total reward]: 0.430
+
+Run 2:
+Learning rate: >? 0.001
+Epochs: >? 10
+Hidden size: >? 32
+Batch size: >? 32
+Loss function (1: MSE, 2: MAE): >? 1
+
 """
