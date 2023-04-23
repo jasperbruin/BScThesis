@@ -96,6 +96,9 @@ def test_lstm_agent(agent, env):
     rewards = []
 
     state = env.reset()
+    if state is None:
+        raise ValueError("Initial state is None, cannot proceed with testing.")
+
     for t in tqdm(range(env.length), initial=2):
         action = agent.get_action(state)
         reward, state, stop = env.step(action)

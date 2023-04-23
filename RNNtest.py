@@ -1,3 +1,7 @@
+"""
+Currently implementing in GPUEasy.py
+"""
+
 import numpy as np
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
