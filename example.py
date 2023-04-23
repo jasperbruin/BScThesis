@@ -15,7 +15,6 @@ best_total_reward = -np.inf
 
 # training
 for theta in range(5):
-
     env.reset(mode='train')
     agent = baselineAgent(theta=theta)
     # give random scores as the initial action
