@@ -220,7 +220,7 @@ def evaluateUCB():
 
 def evaluateBaseline(lr, epochs, hidden_size, dropout_rate, weight_decay):
 
-    env = ROFARS_v1()
+    env = ROFARS_v1(length=3600*24)
     best_total_reward = -np.inf
     input_size = env.n_camera
     output_size = env.n_camera
@@ -302,7 +302,7 @@ def evaluateBaseline(lr, epochs, hidden_size, dropout_rate, weight_decay):
 
 def grid_search():
     learning_rates = [0.001, 0.01, 0.1]
-    epochs_list = [100, 500, 1000]
+    epochs_list = [500, 1000, 2000]
     hidden_sizes = [32, 64, 128]
     dropout_rates = [0.1, 0.3, 0.5]
     weight_decays = [1e-4, 1e-3, 1e-2]
@@ -329,7 +329,7 @@ def grid_search():
 if __name__ == '__main__':
     inp = int(input('1. Baseline\n2. UCB'))
     if inp == 1:
-        inp2 = int(input('\n1. Grid search\n2. Random search'))
+        inp2 = int(input('\n1. Grid search\n2. Manual input'))
         if inp2 == 1:
             best_params = grid_search()
             print(
@@ -337,7 +337,12 @@ if __name__ == '__main__':
             # Train and test the model with the optimal parameters
             evaluateBaseline(*best_params)
         elif inp2 == 2:
-            evaluateBaseline()
+            lr = float(input('Learning rate: >? '))
+            epochs = int(input('Epochs: >? '))
+            hidden_size = int(input('Hidden size: >? '))
+            dropout_rate = float(input('Dropout rate: >? '))
+            weight_decay = float(input('Weight decay: >? '))
+            evaluateBaseline(lr, epochs, hidden_size, dropout_rate, weight_decay)
     elif inp == 2:
         evaluateUCB()
 
@@ -354,11 +359,6 @@ Loss: 0.968
 [total reward]: 0.430
 
 Run2: 
-Learning rate: >? 0.001
-Epochs: >? 2400
-Hidden size: >? 64
-Dropout rate: >? 0.5
-Weight decay: >? 0.0001
 
 
 """
