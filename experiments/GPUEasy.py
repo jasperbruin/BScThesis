@@ -36,12 +36,14 @@ class LSTM_Agent(nn.Module):
         super(LSTM_Agent, self).__init__()
         self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
         self.dense = nn.Linear(hidden_size, output_size)
+        self.relu = nn.ReLU()
         self.records = [[] for _ in range(input_size)]
 
     def forward(self, inputs):
         x, _ = self.lstm(inputs)
         x = x[:, -1, :]
         x = self.dense(x)
+        x = self.relu(x)
         return x
 
     def get_action(self, state):
@@ -52,47 +54,54 @@ class LSTM_Agent(nn.Module):
         action = self(state)
         return action.detach().cpu().numpy()[0]
 
-    def impute_missing_values(self, state):
-        imputed_state = np.copy(state)
-        for i, s in enumerate(state):
-            if s == -1:
-                imputed_state[i] = self.interpolate_missing_value(i)
-            else:
-                self.records[i].append(s)
-        return imputed_state
-
-    def interpolate_missing_value(self, index):
-        if len(self.records[index]) < 2:
-            return np.mean(self.records[index]) if len(self.records[index]) > 0 else 0
-
-        x = np.arange(len(self.records[index]))
-        y = np.array(self.records[index])
-        interpolator = interp1d(x, y, kind='linear', fill_value='extrapolate')
-        return float(interpolator(len(self.records[index])))
-
     def train_lstm_agent(self, dataloader, criterion, optimizer, epochs):
         self.train()
         for epoch in range(epochs):
             running_loss = 0.0
             for states, actions in dataloader:
+                states = states.unsqueeze(1)
                 optimizer.zero_grad()
                 predictions = self(states)
                 loss = criterion(predictions, actions)
                 loss.backward()
                 optimizer.step()
                 running_loss += loss.item()
-            print(f'Epoch {epoch + 1}, Loss: {running_loss / len(dataloader):.3f}')
+            print(
+                f'Epoch {epoch + 1}, Loss: {running_loss / len(dataloader):.3f}')
 
     def test_lstm_agent(self, dataloader, criterion):
         self.eval()
         running_loss = 0.0
         with torch.no_grad():
             for states, actions in dataloader:
+                states = states.unsqueeze(1)
                 predictions = self(states)
                 loss = criterion(predictions, actions)
                 running_loss += loss.item()
         return running_loss / len(dataloader)
 
+def get_train_test(states, split_percent=0.8):
+    n = len(states)
+    split = int(n * split_percent)
+    train_states = states[:split]
+    test_states = states[split:]
+    return train_states, test_states
+
+def get_XY(states, time_steps=1):
+    states = np.array(states)
+    X, Y = [], []
+    for i in range(len(states) - time_steps):
+        X.append(states[i : (i + time_steps)])
+        Y.append(states[i + time_steps])
+    return np.array(X), np.array(Y)
+
+def impute_missing_values(states):
+    imputed_states = []
+    for state in states:
+        mean_values = np.mean([v for v in state if v >= 0])
+        imputed_state = np.array([v if v >= 0 else mean_values for v in state])
+        imputed_states.append(imputed_state)
+    return np.array(imputed_states)
 
 
 
@@ -111,12 +120,16 @@ def create_training_traces(env, mode='train'):
         reward, state, stop = env.step(action)
 
         states.append(state)
-        actions.append(action)
         if stop:
             break
 
-    return states, actions
+    return states
 
+def impute_missing_values(state):
+    # impute missing values with the mean if value is -1
+    mean_values = np.mean([v for v in state if v >= 0])
+    imputed_state = np.array([v if v >= 0 else mean_values for v in state])
+    return imputed_state
 
 
 def evaluateBaseline():
@@ -132,84 +145,30 @@ def evaluateBaseline():
     output_size = env.n_camera
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size).to(device)
     optimizer = optim.Adam(lstm_agent.parameters(), lr=lr)
-    best_total_reward = -np.inf
 
     if loss_function == 1:
         criterion = nn.MSELoss()
     else:
         criterion = nn.L1Loss()
 
-    states, actions = create_training_traces(env, mode='train')
+    states = create_training_traces(env, mode='train')
     states = np.array(states)
-    actions = np.array(actions)
-    states = states.reshape((states.shape[0], 1, states.shape[1]))
-    states_tensor = torch.tensor(states, dtype=torch.float32).to(device)
-    actions_tensor = torch.tensor(actions, dtype=torch.float32).to(device)
 
-    train_dataset = TensorDataset(states_tensor, actions_tensor)
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-    lstm_agent.train_lstm_agent(train_dataloader, criterion, optimizer, epochs=epochs)
 
-    # Test the LSTM agent
-    env.reset(mode='test')
+    # Impute missing values
+    states = impute_missing_values(states)
 
-    # give random scores as the initial action
-    init_action = np.random.rand(env.n_camera)
-    reward, state, stop = env.step(init_action)
+    print(states)
 
-    for t in tqdm(range(env.length), initial=2):
-        action = lstm_agent.get_action(state)
-        reward, state, stop = env.step(action)
+    # Split states into train and test
+    train_states, test_states = get_train_test(states)
 
-        if stop:
-            break
-
-    total_reward = env.get_total_reward()
-    if total_reward > best_total_reward:
-        best_total_reward = total_reward
-
-    print(f'=== TRAINING ===')
-    print('[total reward]:', best_total_reward)
-
-    # Testing
-    env.reset(mode='test')
-
-    # give random scores as the initial action
-    init_action = np.random.rand(env.n_camera)
-    reward, state, stop = env.step(init_action)
-
-    for t in tqdm(range(env.length), initial=2):
-        action = lstm_agent.get_action(state)
-        reward, state, stop = env.step(action)
-
-        if stop:
-            break
-
-    print(f'====== TESTING ======')
-    print('[total reward]:', env.get_total_reward())
+    # Prepare input X and target Y for training and testing
+    X_train, Y_train = get_XY(train_states)
+    X_test, Y_test = get_XY(test_states)
 
 
 
 if __name__ == '__main__':
     evaluateBaseline()
-
-
-"""
-Run 1:
-Learning rate: >? 0.001
-Epochs: >? 2400
-Hidden size: >? 64
-Loss: 0.968
-[total reward]: 0.440                      
-====== TESTING ======
-[total reward]: 0.430
-
-Run 2:
-Learning rate: >? 0.001
-Epochs: >? 10
-Hidden size: >? 32
-Batch size: >? 32
-Loss function (1: MSE, 2: MAE): >? 1
-
-"""

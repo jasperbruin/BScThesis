@@ -1,8 +1,78 @@
+import math
+
 import numpy as np
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
 from tensorflow.keras.optimizers import Adam
-from agents import baselineAgent, LSTM_Agent, GRUAgent
+from agents import baselineAgent, LSTM_Agent
+from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+def get_train_test(states, split_percent=0.8):
+    n = len(states)
+    split = int(n * split_percent)
+    train_states = states[:split]
+    test_states = states[split:]
+    return train_states, test_states
+
+def get_XY(states, time_steps=1):
+    states = np.array(states)
+    X, Y = [], []
+    for i in range(len(states) - time_steps):
+        X.append(states[i : (i + time_steps)])
+        Y.append(states[i + time_steps])
+    return np.array(X), np.array(Y)
+
+def impute_missing_values(states):
+    imputed_states = []
+    for state in states:
+        mean_values = np.mean([v for v in state if v >= 0])
+        imputed_state = np.array([v if v >= 0 else mean_values for v in state])
+        imputed_states.append(imputed_state)
+    return np.array(imputed_states)
+
+
+def create_training_traces(env, mode='train'):
+    # Training
+    env.reset(mode)
+    baseline_agent = baselineAgent()
+    states = []
+
+    # Generate training traces from the Baseline agent
+    init_action = np.random.rand(env.n_camera)
+    reward, state, stop = env.step(init_action)
+
+    for t in tqdm(range(env.length), initial=2):
+        action = baseline_agent.get_action(state)
+        reward, state, stop = env.step(action)
+
+        states.append(state)
+        if stop:
+            break
+
+    return states
+
+# Plot the result
+def plot_result(trainY, testY, train_predict, test_predict):
+    actual = np.append(trainY, testY)
+    predictions = np.append(train_predict, test_predict)
+    rows = len(actual)
+    plt.figure(figsize=(15, 6), dpi=80)
+    plt.plot(range(rows), actual)
+    plt.plot(range(rows), predictions)
+    plt.axvline(x=len(trainY), color='r')
+    plt.legend(['Actual', 'Predictions'])
+    plt.xlabel('Observation number after given time steps')
+    plt.ylabel('Sunspots scaled')
+    plt.title('Actual and Predicted Values. The Red Line Separates The Training And Test Examples')
+    plt.show()
+
+def print_error(trainY, testY, train_predict, test_predict):
+    # Error of predictions
+    train_rmse = math.sqrt(mean_squared_error(trainY, train_predict))
+    test_rmse = math.sqrt(mean_squared_error(testY, test_predict))
+    # Print RMSE
+    print('Train RMSE: %.3f RMSE' % (train_rmse))
+    print('Test RMSE: %.3f RMSE' % (test_rmse))
 
 np.random.seed(0)
 
@@ -13,68 +83,31 @@ input_size = env.n_camera
 hidden_size = 32
 output_size = env.n_camera
 lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
-gru_agent = GRUAgent(input_size, hidden_size, output_size)
 
-optimizer = Adam(lr=0.001)
-gru_agent.compile(optimizer, loss='mae')
+optimizer = Adam(learning_rate=0.001)
+lstm_agent.compile(optimizer, loss='mae')
 
-# Training
-env.reset(mode='train')
-baseline_agent = baselineAgent()
-states, actions = [], []
+time_steps = 10
+train_data = create_training_traces(env, mode='train')
 
-# Generate training traces from the Baseline agent
-init_action = np.random.rand(env.n_camera)
-reward, state, stop = env.step(init_action)
+test_data = create_training_traces(env, mode='test')
 
-for t in tqdm(range(env.length), initial=2):
-    action = baseline_agent.get_action(state)
-    states.append(state)
-    actions.append(action)
+train_data = impute_missing_values(train_data)
+test_data = impute_missing_values(test_data)
 
-    reward, state, stop = env.step(action)
-    if stop:
-        break
 
-# Train the LSTM agent with the training traces
-states = np.array(states)
-actions = np.array(actions)
+trainX, trainY = get_XY(train_data, time_steps)
+testX, testY = get_XY(test_data, time_steps)
 
-states = states.reshape((states.shape[0], 1, states.shape[1]))
-gru_agent.fit(states, actions, epochs=15, verbose=1)
+lstm_agent.fit(trainX, trainY, epochs=5, batch_size=32, verbose=2)
 
-# Test the LSTM agent
-env.reset(mode='test')
-rewards = []
+# make predictions
+train_predict = lstm_agent.predict(trainX)
+test_predict = lstm_agent.predict(testX)
 
-for t in tqdm(range(env.length), initial=2):
-    action = gru_agent.get_action(state)
-    reward, state, stop = env.step(action)
-    rewards.append(reward)
+# Print error
+print_error(trainY, testY, train_predict, test_predict)
 
-    if stop:
-        break
-
-total_reward = np.mean(rewards)
-if total_reward > best_total_reward:
-    best_total_reward = total_reward
-
-print(f'=== TRAINING ===')
-print('[total reward]:', total_reward)
-
-# Testing
-env.reset(mode='test')
-rewards = []
-
-for t in tqdm(range(env.length), initial=2):
-    action = gru_agent.get_action(state)
-    reward, state, stop = env.step(action)
-    rewards.append(reward)
-
-    if stop:
-        break
-
-print(f'====== TESTING ======')
-print('[total reward]:', np.mean(rewards))
-
+# Plot result
+plot_result(trainY, testY, train_predict, test_predict)
 
