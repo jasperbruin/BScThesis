@@ -81,15 +81,14 @@ best_total_reward = -np.inf
 
 input_size = env.n_camera
 hidden_size = 32
+time_steps = 50
 output_size = env.n_camera
 lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
 
 optimizer = Adam(learning_rate=0.001)
 lstm_agent.compile(optimizer, loss='mae')
 
-time_steps = 10
 train_data = create_training_traces(env, mode='train')
-
 test_data = create_training_traces(env, mode='test')
 
 train_data = impute_missing_values(train_data)
@@ -99,7 +98,7 @@ test_data = impute_missing_values(test_data)
 trainX, trainY = get_XY(train_data, time_steps)
 testX, testY = get_XY(test_data, time_steps)
 
-lstm_agent.fit(trainX, trainY, epochs=5, batch_size=32, verbose=2)
+lstm_agent.fit(trainX, trainY, epochs=20, batch_size=32, verbose=1)
 
 # make predictions
 train_predict = lstm_agent.predict(trainX)
@@ -110,4 +109,14 @@ print_error(trainY, testY, train_predict, test_predict)
 
 # Plot result
 plot_result(trainY, testY, train_predict, test_predict)
+
+"""
+Run 1: hidden_size = 64, epochs = 5, batch_size = 32, time_steps = 10
+Train RMSE: 0.727 RMSE
+Test RMSE: 0.702 RMSE
+
+Run 2: hidden_size = 32, epochs = 10, batch_size = 32, time_steps = 15
+Train RMSE: 0.724 RMSE
+Test RMSE: 0.701 RMSE
+"""
 
