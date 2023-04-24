@@ -2,10 +2,8 @@
 # author: Cyril Hsu @ UvA-MNS
 # date: 23/02/2023
 from collections import deque
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import LSTM, Dense, Input, GRU
 import numpy as np
-
+from torch import nn
 
 
 class baselineAgent:
@@ -150,35 +148,17 @@ class UCBAgent:
             else:
                 self.counts[i] += 0
 
-class LSTM_Agent(Model):
+class LSTM_Agent(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(LSTM_Agent, self).__init__()
-        self.lstm = LSTM(hidden_size, return_sequences=False)
-        self.dense = Dense(output_size, activation='relu')
-        self.input_layer = Input(shape=(1, input_size))
-        self.output_layer = self.dense(self.lstm(self.input_layer))
-        self.model = Model(self.input_layer, self.output_layer)
-
+        self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
+        self.dense = nn.Linear(hidden_size, output_size)
+        self.relu = nn.ReLU()
         self.records = [[] for _ in range(input_size)]
 
-    def call(self, inputs):
-        x = self.lstm(inputs)
+    def forward(self, inputs):
+        x, _ = self.lstm(inputs)
+        x = x[:, -1, :]
         x = self.dense(x)
+        x = self.relu(x)
         return x
-
-    def get_action(self, state):
-        imputed_state = self.impute_missing_values(state)
-        state = np.expand_dims(imputed_state, axis=0)
-        state = np.expand_dims(state, axis=1)
-        action = self.model.predict(state)
-        print(action[0])
-        return action[0]
-
-    def impute_missing_values(self, state):
-        imputed_state = np.copy(state)
-        for i, s in enumerate(state):
-            if s == -1:
-                imputed_state[i] = np.mean(self.records[i]) if len(self.records[i]) > 0 else 0
-            else:
-                self.records[i].append(s)
-        return imputed_state

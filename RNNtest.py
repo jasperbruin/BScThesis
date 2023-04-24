@@ -1,12 +1,16 @@
 import math
-
 import numpy as np
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
-from tensorflow.keras.optimizers import Adam
 from agents import baselineAgent, LSTM_Agent
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
+import torch
+from torch import nn
+from torch.optim import Adam
+
+device = torch.device("mps")
+
 def get_train_test(states, split_percent=0.8):
     n = len(states)
     split = int(n * split_percent)
@@ -85,8 +89,9 @@ time_steps = 50
 output_size = env.n_camera
 lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
 
-optimizer = Adam(learning_rate=0.001)
-lstm_agent.compile(optimizer, loss='mae')
+
+optimizer = Adam(lstm_agent.parameters(), lr=0.001)
+criterion = nn.L1Loss()
 
 train_data = create_training_traces(env, mode='train')
 test_data = create_training_traces(env, mode='test')
@@ -94,29 +99,37 @@ test_data = create_training_traces(env, mode='test')
 train_data = impute_missing_values(train_data)
 test_data = impute_missing_values(test_data)
 
-
 trainX, trainY = get_XY(train_data, time_steps)
 testX, testY = get_XY(test_data, time_steps)
 
-lstm_agent.fit(trainX, trainY, epochs=10, batch_size=32, verbose=1)
+trainX = torch.tensor(trainX, dtype=torch.float32)
+trainY = torch.tensor(trainY, dtype=torch.float32)
+testX = torch.tensor(testX, dtype=torch.float32)
+testY = torch.tensor(testY, dtype=torch.float32)
 
-# make predictions
-train_predict = lstm_agent.predict(trainX)
-test_predict = lstm_agent.predict(testX)
+epochs = 10
+batch_size = 32
+
+# Training loop
+for epoch in range(epochs):
+    for i in range(0, len(trainX), batch_size):
+        x_batch = trainX[i : i + batch_size]
+        y_batch = trainY[i : i + batch_size]
+
+        optimizer.zero_grad()
+        outputs = lstm_agent(x_batch)
+        loss = criterion(outputs, y_batch)
+        loss.backward()
+        optimizer.step()
+
+    print(f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}')
+
+# Make predictions
+train_predict = lstm_agent(trainX).detach().numpy()
+test_predict = lstm_agent(testX).detach().numpy()
 
 # Print error
-print_error(trainY, testY, train_predict, test_predict)
+print_error(trainY.numpy(), testY.numpy(), train_predict, test_predict)
 
 # Plot result
-plot_result(trainY, testY, train_predict, test_predict)
-
-"""
-Run 1: hidden_size = 64, epochs = 5, batch_size = 32, time_steps = 10
-Train RMSE: 0.727 RMSE
-Test RMSE: 0.702 RMSE
-
-Run 2: hidden_size = 32, epochs = 10, batch_size = 32, time_steps = 50
-Train RMSE: 0.724 RMSE
-Test RMSE: 0.701 RMSE
-"""
-
+plot_result(trainY.numpy(), testY.numpy(), train_predict, test_predict)
