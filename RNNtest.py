@@ -2,7 +2,7 @@ import math
 import numpy as np
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
-from agents import baselineAgent, LSTM_Agent
+from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 import torch
@@ -35,25 +35,48 @@ def impute_missing_values(states):
     return np.array(imputed_states)
 
 
-def create_training_traces(env, mode='train'):
+def create_training_traces(env, mode, inp):
+
     # Training
     env.reset(mode)
-    baseline_agent = baselineAgent()
-    states = []
+    if inp == 1:
+        baseline_agent = baselineAgent()
+        states = []
 
-    # Generate training traces from the Baseline agent
-    init_action = np.random.rand(env.n_camera)
-    reward, state, stop = env.step(init_action)
+        # Generate training traces from the Baseline agent
+        init_action = np.random.rand(env.n_camera)
+        reward, state, stop = env.step(init_action)
 
-    for t in tqdm(range(env.length), initial=2):
-        action = baseline_agent.get_action(state)
-        reward, state, stop = env.step(action)
+        for t in tqdm(range(env.length), initial=2):
+            action = baseline_agent.get_action(state)
+            reward, state, stop = env.step(action)
 
-        states.append(state)
-        if stop:
-            break
+            states.append(state)
+            if stop:
+                break
 
-    return states
+        return states
+    elif inp == 2:
+        states = []
+        agent = DiscountedUCBAgent(gamma=0.999)
+        agent.initialize(env.n_camera)
+
+        for t in tqdm(range(env.length), initial=2):
+            action = agent.get_action()
+            reward, state, stop = env.step(action)
+
+            # Update the UCB Agent
+            agent.update(action, state)
+
+            states.append(state)
+
+            if stop:
+                break
+
+        return states
+
+
+
 
 # Plot the result
 def plot_result(trainY, testY, train_predict, test_predict):
@@ -85,7 +108,8 @@ best_total_reward = -np.inf
 
 input_size = env.n_camera
 hidden_size = 32
-time_steps = 50
+time_steps = 10
+inp = int(input("1. Baseline Agent 2. UCB Agent: "))
 output_size = env.n_camera
 lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
 
@@ -93,8 +117,8 @@ lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
 optimizer = Adam(lstm_agent.parameters(), lr=0.001)
 criterion = nn.L1Loss()
 
-train_data = create_training_traces(env, mode='train')
-test_data = create_training_traces(env, mode='test')
+train_data = create_training_traces(env, 'train', inp)
+test_data = create_training_traces(env, 'test', inp)
 
 train_data = impute_missing_values(train_data)
 test_data = impute_missing_values(test_data)
