@@ -287,16 +287,12 @@ def robustness_test(agent_type, budget_ratios):
 
     for budget_ratio in budget_ratios:
         env = ROFARS_v1(budget_ratio=budget_ratio)
-
-        if agent_type in [1, 2, 3]:
-            env.reset(mode='train')
-        elif agent_type in [4, 5]:
-            env.reset(mode='test')
+        env.reset(mode='test')
 
         if agent_type == 1:
             agent = UCBAgent()
             agent.initialize(env.n_camera)
-            env.reset(mode='test')
+
 
             for t in range(env.length):
                 action = agent.get_action()
@@ -312,7 +308,7 @@ def robustness_test(agent_type, budget_ratios):
         elif agent_type == 2:
             agent = SlidingWindowUCBAgent(window_size=best_window_size)
             agent.initialize(env.n_camera)
-            env.reset(mode='test')
+
 
             for t in range(env.length):
                 action = agent.get_action()
@@ -328,7 +324,7 @@ def robustness_test(agent_type, budget_ratios):
         elif agent_type == 3:
             agent = DiscountedUCBAgent(gamma=best_gamma)
             agent.initialize(env.n_camera)
-            env.reset(mode='test')
+
 
             for t in range(env.length):
                 action = agent.get_action()
@@ -343,8 +339,8 @@ def robustness_test(agent_type, budget_ratios):
 
 
         elif agent_type == 4:
-            env.reset(mode='train')
-            agent = baselineAgent(agent_type='simple')
+
+            agent = baselineAgent(agent_type='simple', theta=0)
             # give random scores as the initial action
             init_action = np.random.rand(env.n_camera)
             reward, state, stop = env.step(init_action)
@@ -362,8 +358,7 @@ def robustness_test(agent_type, budget_ratios):
             total_reward = env.get_total_reward()
             rewards.append(total_reward)
         elif agent_type == 5:
-            env.reset(mode='train')
-            agent = baselineAgent(agent_type='strong')
+            agent = baselineAgent(agent_type='strong', theta=0)
             # give random scores as the initial action
             init_action = np.random.rand(env.n_camera)
             reward, state, stop = env.step(init_action)
@@ -410,13 +405,13 @@ if __name__ == '__main__':
 
     plt.xlabel("Budget Ratio", fontsize=14)
     plt.ylabel("Total Reward", fontsize=14)
-    plt.title("Robustness Test for UCB-1, SW-UCB, and D-UCB", fontsize=16)
+    plt.title("Robustness Test [Testing] for UCB-1, SW-UCB, and D-UCB", fontsize=16)
     plt.legend(fontsize=12)
     plt.grid(alpha=0.3)
     plt.xticks(fontsize=12)
     plt.yticks(fontsize=12)
     plt.tight_layout()
-    plt.savefig("Robustness_Test_Academic.png")
+    plt.savefig("Robustness_Test_Academic_testing.png")
     plt.show()
 
 
