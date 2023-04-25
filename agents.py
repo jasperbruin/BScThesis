@@ -156,8 +156,8 @@ class LSTM_Agent(nn.Module):
         self.relu = nn.ReLU()
         self.records = [[] for _ in range(input_size)]
 
-    def forward(self, inputs):
-        x, _ = self.lstm(inputs)
+    def forward(self, state):
+        x, _ = self.lstm(state)
         x = x[:, -1, :]
         x = self.dense(x)
         x = self.relu(x)

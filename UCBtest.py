@@ -2,8 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
-from agents import SlidingWindowUCBAgent, UCBAgent, DiscountedUCBAgent
+from agents import SlidingWindowUCBAgent, UCBAgent, DiscountedUCBAgent, baselineAgent
 import time
+
 
 def SWUCBExperiment():
     np.random.seed(0)
@@ -250,7 +251,7 @@ def timeexperiment(agent_type):
         start_time = time.time()
         action = agent.get_action()
         end_time = time.time()
-        inference_time = end_time - start_time
+        inference_time = (end_time - start_time) * 1000
         inference_times.append(inference_time)
 
         reward, state, stop = env.step(action)
@@ -265,56 +266,208 @@ def timeexperiment(agent_type):
 
     return np.mean(inference_times)
 
+def robustness_test(agent_type, budget_ratios):
+    if agent_type == 1:
+        print("UCB-1")
+    elif agent_type == 2:
+        print("SW-UCB")
+    elif agent_type == 3:
+        print("D-UCB")
+    elif agent_type == 4:
+        print("Simple Baseline")
+    elif agent_type == 5:
+        print("Strong Baseline")
+
+    np.random.seed(0)
+
+    best_window_size = 50 * 60  # Best window size obtained from previous experiments
+    best_gamma = 0.999  # Best gamma obtained from previous experiments
+
+    rewards = []
+
+    for budget_ratio in budget_ratios:
+        env = ROFARS_v1(budget_ratio=budget_ratio)
+
+        if agent_type in [1, 2, 3]:
+            env.reset(mode='train')
+        elif agent_type in [4, 5]:
+            env.reset(mode='test')
+
+        if agent_type == 1:
+            agent = UCBAgent()
+            agent.initialize(env.n_camera)
+            env.reset(mode='test')
+
+            for t in range(env.length):
+                action = agent.get_action()
+                reward, state, stop = env.step(action)
+                agent.update(action, state)
+
+                if stop:
+                    break
+
+            total_reward = env.get_total_reward()
+            rewards.append(total_reward)
+
+        elif agent_type == 2:
+            agent = SlidingWindowUCBAgent(window_size=best_window_size)
+            agent.initialize(env.n_camera)
+            env.reset(mode='test')
+
+            for t in range(env.length):
+                action = agent.get_action()
+                reward, state, stop = env.step(action)
+                agent.update(action, state)
+
+                if stop:
+                    break
+
+            total_reward = env.get_total_reward()
+            rewards.append(total_reward)
+
+        elif agent_type == 3:
+            agent = DiscountedUCBAgent(gamma=best_gamma)
+            agent.initialize(env.n_camera)
+            env.reset(mode='test')
+
+            for t in range(env.length):
+                action = agent.get_action()
+                reward, state, stop = env.step(action)
+                agent.update(action, state)
+
+                if stop:
+                    break
+
+            total_reward = env.get_total_reward()
+            rewards.append(total_reward)
+
+
+        elif agent_type == 4:
+            env.reset(mode='train')
+            agent = baselineAgent(agent_type='simple')
+            # give random scores as the initial action
+            init_action = np.random.rand(env.n_camera)
+            reward, state, stop = env.step(init_action)
+
+            for t in tqdm(range(env.length), initial=2):
+
+                action = agent.get_action(state)
+                reward, state, stop = env.step(action)
+
+
+                # do sth to update your algorithm here
+
+                if stop:
+                    break
+            total_reward = env.get_total_reward()
+            rewards.append(total_reward)
+        elif agent_type == 5:
+            env.reset(mode='train')
+            agent = baselineAgent(agent_type='strong')
+            # give random scores as the initial action
+            init_action = np.random.rand(env.n_camera)
+            reward, state, stop = env.step(init_action)
+
+            for t in tqdm(range(env.length), initial=2):
+
+                action = agent.get_action(state)
+                reward, state, stop = env.step(action)
+
+
+                # do sth to update your algorithm here
+
+                if stop:
+                    break
+
+            total_reward = env.get_total_reward()
+            rewards.append(total_reward)
+
+
+    return budget_ratios, rewards
 
 if __name__ == '__main__':
-    print("Enter the agent you want to test: ")
-    inp = int(input('1. UCB-1 \n2. SW-UCB \n3. D-UCB\n4. Time experiment\n'))
-    if inp == 1:
-        SWUCBOpt(1)
-    elif inp == 2:
-        inp2 = int(input('Find optimal window size? (1. Yes, 2. No)'))
-        if inp2 == 1:
-            SWUCBExperiment()
-        elif inp2 == 2:
-            SWUCBOpt(2)
-    elif inp == 3:
-        inp2 = int(input('Find optimal gamma? (1. Yes, 2. No)'))
-        if inp2 == 1:
-            DiscountedUCBExperiment()
-        elif inp2 == 2:
-            SWUCBOpt(3)
-    elif inp == 4:
-        sw_ucb_inference_times = timeexperiment(2)
-        ucb1_inference_times = timeexperiment(1)
-        d_ucb_inference_times = timeexperiment(3)
+    budget_ratios = [0.1, 0.3, 0.5, 0.7, 0.9]
 
-        # Plot the average inference times for each agent as a bar plot
-        agents = ['SW-UCB', 'UCB-1', 'D-UCB']
-        avg_inference_times = [sw_ucb_inference_times,
-                               ucb1_inference_times,
-                               d_ucb_inference_times]
+    # Pass budget_ratios as an argument to the robustness_test() function
+    budget_ratios, rewards_ucb1 = robustness_test(1, budget_ratios)
+    budget_ratios, rewards_sw_ucb = robustness_test(2, budget_ratios)
+    budget_ratios, rewards_d_ucb = robustness_test(3, budget_ratios)
+    budget_ratios, rewards_simple_baseline = robustness_test(4, budget_ratios)
+    budget_ratios, rewards_strong_baseline = robustness_test(5, budget_ratios)
 
-        print(avg_inference_times)
+    # Plot the results
+    plt.figure(figsize=(8, 6))
+    plt.plot(budget_ratios, rewards_ucb1, marker='o', markersize=8,
+             linestyle='-', linewidth=2, label="UCB-1")
+    plt.plot(budget_ratios, rewards_sw_ucb, marker='s', markersize=8,
+             linestyle='--', linewidth=2, label="SW-UCB")
+    plt.plot(budget_ratios, rewards_d_ucb, marker='^', markersize=8,
+             linestyle='-.', linewidth=2, label="D-UCB")
+    plt.plot(budget_ratios, rewards_simple_baseline, marker='x', markersize=8,
+             linestyle=':', linewidth=2, label="Simple Baseline")
+    plt.plot(budget_ratios, rewards_strong_baseline, marker='D', markersize=8,
+             linestyle=(0, (5, 1)), linewidth=2, label="Strong Baseline")
 
-        # Black and white color palette
-        colors = ['#333333', '#666666', '#999999']
+    plt.xlabel("Budget Ratio", fontsize=14)
+    plt.ylabel("Total Reward", fontsize=14)
+    plt.title("Robustness Test for UCB-1, SW-UCB, and D-UCB", fontsize=16)
+    plt.legend(fontsize=12)
+    plt.grid(alpha=0.3)
+    plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.tight_layout()
+    plt.savefig("Robustness_Test_Academic.png")
+    plt.show()
 
-        plt.bar(agents, avg_inference_times, color=colors, edgecolor='black',
-                linewidth=1)
-        plt.xlabel('Agent', fontsize=12)
-        plt.ylabel('Average Inference Time (s)', fontsize=10)
-        plt.title(
-            'Average Inference Time for SW-UCB, UCB-1, and D-UCB during Training',
-            fontsize=10)
-        plt.grid(axis='y', linestyle='--', alpha=0.7)
-        plt.tight_layout()
-        plt.savefig('UCB_AverageInferenceTime_Training_BW.png')
-        plt.show()
+
+# if __name__ == '__main__':
+#     print("Enter the agent you want to test: ")
+#     inp = int(input('1. UCB-1 \n2. SW-UCB \n3. D-UCB\n4. Time experiment\n'))
+#     if inp == 1:
+#         SWUCBOpt(1)
+#     elif inp == 2:
+#         inp2 = int(input('Find optimal window size? (1. Yes, 2. No)'))
+#         if inp2 == 1:
+#             SWUCBExperiment()
+#         elif inp2 == 2:
+#             SWUCBOpt(2)
+#     elif inp == 3:
+#         inp2 = int(input('Find optimal gamma? (1. Yes, 2. No)'))
+#         if inp2 == 1:
+#             DiscountedUCBExperiment()
+#         elif inp2 == 2:
+#             SWUCBOpt(3)
+#     elif inp == 4:
+#         sw_ucb_inference_times = timeexperiment(2)
+#         ucb1_inference_times = timeexperiment(1)
+#         d_ucb_inference_times = timeexperiment(3)
+#
+#         # Plot the average inference times for each agent as a bar plot
+#         agents = ['SW-UCB', 'UCB-1', 'D-UCB']
+#         avg_inference_times = [sw_ucb_inference_times,
+#                                ucb1_inference_times,
+#                                d_ucb_inference_times]
+#
+#         print(avg_inference_times)
+#
+#         # Black and white color palette
+#         colors = ['#333333', '#666666', '#999999']
+#
+#         plt.bar(agents, avg_inference_times, color=colors, edgecolor='black',
+#                 linewidth=1)
+#         plt.xlabel('Agent', fontsize=12)
+#         plt.ylabel('Average Inference Time (ms)', fontsize=10)
+#         plt.title(
+#             'Average Inference Time for SW-UCB, UCB-1, and D-UCB during Training',
+#             fontsize=10)
+#         plt.grid(axis='y', linestyle='--', alpha=0.7)
+#         plt.tight_layout()
+#         plt.savefig('UCB_AverageInferenceTime_Training_BW_ms.png')
+#         plt.show()
 
 """
 Baseline:
-====== TESTING ======
-[total reward]: 0.506
+Strong: 0.506 Weak: 0.317
 
 
 Run 1 SW-UCB best window size = 50 * 60:

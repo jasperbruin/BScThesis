@@ -101,6 +101,8 @@ def print_error(trainY, testY, train_predict, test_predict):
     print('Train RMSE: %.3f RMSE' % (train_rmse))
     print('Test RMSE: %.3f RMSE' % (test_rmse))
 
+
+
 np.random.seed(0)
 
 env = ROFARS_v1()
