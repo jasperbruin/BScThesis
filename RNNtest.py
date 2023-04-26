@@ -12,6 +12,14 @@ from bayes_opt import BayesianOptimization
 
 device = torch.device("mps")
 
+inp = int(input("1. MSE\n2. MAE \n3. Huber\n"))
+if inp == 1:
+    criterion = nn.MSELoss()
+if inp == 2:
+    criterion = nn.L1Loss()
+if inp == 3:
+    criterion = nn.SmoothL1Loss()
+
 def get_train_test(states, split_percent=0.8):
     n = len(states)
     split = int(n * split_percent)
@@ -77,12 +85,11 @@ def create_training_traces(env, mode, inp):
         return states
 
 
-def train_and_evaluate(params, batch_size=32):
-    hidden_size, time_steps, epochs = map(int, params)
-
+def train_and_evaluate(params):
+    hidden_size, time_steps, epochs, lr, batch_size = [int(p) for p in params[:-1]] + [params[-1]]
+    batch_size = int(batch_size)
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
-    optimizer = Adam(lstm_agent.parameters(), lr=0.001)
-    criterion = nn.L1Loss()
+    optimizer = Adam(lstm_agent.parameters(), lr=lr)
 
     trainX, trainY = get_XY(train_data, time_steps)
     testX, testY = get_XY(test_data, time_steps)
@@ -115,8 +122,8 @@ def train_and_evaluate(params, batch_size=32):
     return train_rmse, test_rmse
 
 
-def optimize_lstm_agent(epochs, hidden_size, time_steps):
-    _, test_rmse = train_and_evaluate((hidden_size, time_steps, epochs), batch_size=32)
+def optimize_lstm_agent(hidden_size, time_steps, epochs, lr, batch_size):
+    _, test_rmse = train_and_evaluate((hidden_size, time_steps, epochs, lr, batch_size))
     return -test_rmse
 
 
@@ -162,13 +169,17 @@ if __name__ == '__main__':
     test_data = impute_missing_values(test_data)
 
     pbounds = {
-        'hidden_size': (32, 128),
-        'time_steps': (1, 5),
-        'epochs': (10, 50)
+        'hidden_size': (16, 64),
+        'time_steps': (1, 50),
+        'epochs': (10, 50),
+        'lr': (1e-4, 1e-2),
+        'batch_size': (16, 64)
     }
 
     optimizer = BayesianOptimization(
-        f=optimize_lstm_agent,
+        f=lambda hidden_size, time_steps, epochs, lr,
+                 batch_size: optimize_lstm_agent(hidden_size, time_steps,
+                                                 epochs, lr, batch_size),
         pbounds=pbounds,
         verbose=2,
         random_state=1,
@@ -180,14 +191,14 @@ if __name__ == '__main__':
     hidden_size = int(best_params['hidden_size'])
     time_steps = int(best_params['time_steps'])
     epochs = int(best_params['epochs'])
+    lr = best_params['lr']
+    batch_size = int(best_params['batch_size'])
 
     print(
-        f"Best parameters: Hidden size: {hidden_size}, Time steps: {time_steps}, Epochs: {epochs}")
+        f"Best parameters: Hidden size: {hidden_size}, Time steps: {time_steps}, Epochs: {epochs}, Learning rate: {lr}, Batch size: {batch_size}")
 
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
-    optimizer = Adam(lstm_agent.parameters(), lr=0.001)
-    #criterion = nn.L1Loss()
-    criterion = nn.MSELoss()
+    optimizer = Adam(lstm_agent.parameters(), lr=lr)
 
     trainX, trainY = get_XY(train_data, time_steps)
     testX, testY = get_XY(test_data, time_steps)
@@ -196,8 +207,6 @@ if __name__ == '__main__':
     trainY = torch.tensor(trainY, dtype=torch.float32)
     testX = torch.tensor(testX, dtype=torch.float32)
     testY = torch.tensor(testY, dtype=torch.float32)
-
-    batch_size = 32
 
     # Training loop
     for epoch in range(epochs):
@@ -225,11 +234,6 @@ if __name__ == '__main__':
 
 
 """
-UCB Traces:
-Run1: Best parameters: Hidden size: 72, Time steps: 2, Epochs: 31, lr: 0.001, mae
-Epoch: 31, Loss: 0.44
-Train RMSE: 0.723 RMSE
-Test RMSE: 0.706 RMSE
-
-Baseline Traces: 
+Baseline Agent results:
+Run 1: MSE
 """

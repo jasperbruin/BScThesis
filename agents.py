@@ -3,7 +3,8 @@
 # date: 23/02/2023
 from collections import deque
 import numpy as np
-from torch import nn
+import torch
+import torch.nn as nn
 
 
 class baselineAgent:
@@ -153,12 +154,26 @@ class LSTM_Agent(nn.Module):
         super(LSTM_Agent, self).__init__()
         self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
         self.dense = nn.Linear(hidden_size, output_size)
-        #self.relu = nn.ReLU()
         self.records = [[] for _ in range(input_size)]
+        self.hidden_size = hidden_size
 
     def forward(self, state):
         x, _ = self.lstm(state)
         x = x[:, -1, :]
         x = self.dense(x)
-        #x = self.relu(x)
         return x
+
+    def initialize(self, n_actions):
+        pass
+
+    def get_action(self, state):
+        state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+        with torch.no_grad():
+            output = self.forward(state_tensor)
+        action = output.numpy().squeeze()
+        return action
+
+    def update(self, actions, state):
+        for i, reward in enumerate(state):
+            if reward >= 0:
+                self.records[i].append(reward)
