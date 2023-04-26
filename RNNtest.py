@@ -186,7 +186,8 @@ if __name__ == '__main__':
 
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
     optimizer = Adam(lstm_agent.parameters(), lr=0.001)
-    criterion = nn.L1Loss()
+    #criterion = nn.L1Loss()
+    criterion = nn.MSELoss()
 
     trainX, trainY = get_XY(train_data, time_steps)
     testX, testY = get_XY(test_data, time_steps)
@@ -221,3 +222,14 @@ if __name__ == '__main__':
 
     # Plot result
     plot_result(trainY.numpy(), testY.numpy(), train_predict, test_predict)
+
+
+"""
+UCB Traces:
+Run1: Best parameters: Hidden size: 72, Time steps: 2, Epochs: 31, lr: 0.001, mae
+Epoch: 31, Loss: 0.44
+Train RMSE: 0.723 RMSE
+Test RMSE: 0.706 RMSE
+
+Baseline Traces: 
+"""

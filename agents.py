@@ -153,12 +153,12 @@ class LSTM_Agent(nn.Module):
         super(LSTM_Agent, self).__init__()
         self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
         self.dense = nn.Linear(hidden_size, output_size)
-        self.relu = nn.ReLU()
+        #self.relu = nn.ReLU()
         self.records = [[] for _ in range(input_size)]
 
     def forward(self, state):
         x, _ = self.lstm(state)
         x = x[:, -1, :]
         x = self.dense(x)
-        x = self.relu(x)
+        #x = self.relu(x)
         return x
