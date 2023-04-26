@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch import nn
 from torch.optim import Adam
+from bayes_opt import BayesianOptimization
 
 device = torch.device("mps")
 
@@ -76,6 +77,49 @@ def create_training_traces(env, mode, inp):
         return states
 
 
+def train_and_evaluate(params, batch_size=32):
+    hidden_size, time_steps, epochs = map(int, params)
+
+    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
+    optimizer = Adam(lstm_agent.parameters(), lr=0.001)
+    criterion = nn.L1Loss()
+
+    trainX, trainY = get_XY(train_data, time_steps)
+    testX, testY = get_XY(test_data, time_steps)
+
+    trainX = torch.tensor(trainX, dtype=torch.float32)
+    trainY = torch.tensor(trainY, dtype=torch.float32)
+    testX = torch.tensor(testX, dtype=torch.float32)
+    testY = torch.tensor(testY, dtype=torch.float32)
+
+    # Training loop
+    for epoch in range(epochs):
+        for i in range(0, len(trainX), batch_size):
+            x_batch = trainX[i : i + batch_size]
+            y_batch = trainY[i : i + batch_size]
+
+            optimizer.zero_grad()
+            outputs = lstm_agent(x_batch)
+            loss = criterion(outputs, y_batch)
+            loss.backward()
+            optimizer.step()
+
+    # Make predictions
+    train_predict = lstm_agent(trainX).detach().numpy()
+    test_predict = lstm_agent(testX).detach().numpy()
+
+    # Print error
+    train_rmse = math.sqrt(mean_squared_error(trainY.numpy(), train_predict))
+    test_rmse = math.sqrt(mean_squared_error(testY.numpy(), test_predict))
+
+    return train_rmse, test_rmse
+
+
+def optimize_lstm_agent(epochs, hidden_size, time_steps):
+    _, test_rmse = train_and_evaluate((hidden_size, time_steps, epochs), batch_size=32)
+    return -test_rmse
+
+
 
 
 # Plot the result
@@ -102,60 +146,78 @@ def print_error(trainY, testY, train_predict, test_predict):
     print('Test RMSE: %.3f RMSE' % (test_rmse))
 
 
+if __name__ == '__main__':
+    np.random.seed(0)
 
-np.random.seed(0)
+    env = ROFARS_v1()
 
-env = ROFARS_v1()
-best_total_reward = -np.inf
+    input_size = env.n_camera
+    output_size = env.n_camera
+    inp = int(input("1. Baseline Agent 2. UCB Agent: "))
 
-input_size = env.n_camera
-hidden_size = 32
-time_steps = 10
-inp = int(input("1. Baseline Agent 2. UCB Agent: "))
-output_size = env.n_camera
-lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
+    train_data = create_training_traces(env, 'train', inp)
+    test_data = create_training_traces(env, 'test', inp)
 
+    train_data = impute_missing_values(train_data)
+    test_data = impute_missing_values(test_data)
 
-optimizer = Adam(lstm_agent.parameters(), lr=0.001)
-criterion = nn.L1Loss()
+    pbounds = {
+        'hidden_size': (32, 128),
+        'time_steps': (1, 5),
+        'epochs': (10, 50)
+    }
 
-train_data = create_training_traces(env, 'train', inp)
-test_data = create_training_traces(env, 'test', inp)
+    optimizer = BayesianOptimization(
+        f=optimize_lstm_agent,
+        pbounds=pbounds,
+        verbose=2,
+        random_state=1,
+    )
 
-train_data = impute_missing_values(train_data)
-test_data = impute_missing_values(test_data)
+    optimizer.maximize(init_points=5, n_iter=10)
 
-trainX, trainY = get_XY(train_data, time_steps)
-testX, testY = get_XY(test_data, time_steps)
+    best_params = optimizer.max['params']
+    hidden_size = int(best_params['hidden_size'])
+    time_steps = int(best_params['time_steps'])
+    epochs = int(best_params['epochs'])
 
-trainX = torch.tensor(trainX, dtype=torch.float32)
-trainY = torch.tensor(trainY, dtype=torch.float32)
-testX = torch.tensor(testX, dtype=torch.float32)
-testY = torch.tensor(testY, dtype=torch.float32)
+    print(
+        f"Best parameters: Hidden size: {hidden_size}, Time steps: {time_steps}, Epochs: {epochs}")
 
-epochs = 10
-batch_size = 32
+    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
+    optimizer = Adam(lstm_agent.parameters(), lr=0.001)
+    criterion = nn.L1Loss()
 
-# Training loop
-for epoch in range(epochs):
-    for i in range(0, len(trainX), batch_size):
-        x_batch = trainX[i : i + batch_size]
-        y_batch = trainY[i : i + batch_size]
+    trainX, trainY = get_XY(train_data, time_steps)
+    testX, testY = get_XY(test_data, time_steps)
 
-        optimizer.zero_grad()
-        outputs = lstm_agent(x_batch)
-        loss = criterion(outputs, y_batch)
-        loss.backward()
-        optimizer.step()
+    trainX = torch.tensor(trainX, dtype=torch.float32)
+    trainY = torch.tensor(trainY, dtype=torch.float32)
+    testX = torch.tensor(testX, dtype=torch.float32)
+    testY = torch.tensor(testY, dtype=torch.float32)
 
-    print(f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}')
+    batch_size = 32
 
-# Make predictions
-train_predict = lstm_agent(trainX).detach().numpy()
-test_predict = lstm_agent(testX).detach().numpy()
+    # Training loop
+    for epoch in range(epochs):
+        for i in range(0, len(trainX), batch_size):
+            x_batch = trainX[i: i + batch_size]
+            y_batch = trainY[i: i + batch_size]
 
-# Print error
-print_error(trainY.numpy(), testY.numpy(), train_predict, test_predict)
+            optimizer.zero_grad()
+            outputs = lstm_agent(x_batch)
+            loss = criterion(outputs, y_batch)
+            loss.backward()
+            optimizer.step()
 
-# Plot result
-plot_result(trainY.numpy(), testY.numpy(), train_predict, test_predict)
+        print(f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}')
+
+    # Make predictions
+    train_predict = lstm_agent(trainX).detach().numpy()
+    test_predict = lstm_agent(testX).detach().numpy()
+
+    # Print error
+    print_error(trainY.numpy(), testY.numpy(), train_predict, test_predict)
+
+    # Plot result
+    plot_result(trainY.numpy(), testY.numpy(), train_predict, test_predict)
