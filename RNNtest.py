@@ -235,5 +235,20 @@ if __name__ == '__main__':
 
 """
 Baseline Agent results:
-Run 1: MSE
+Run 1: MSE; Best parameters: Hidden size: 25, Time steps: 2, Epochs: 37, Learning rate: 0.00879336262027036, Batch size: 36
+Epoch: 37, Loss: 0.405
+Train RMSE: 0.760 RMSE
+Test RMSE: 0.728 RMSE
+
+
+Run 2: Best parameters: Hidden size: 25, Time steps: 2, Epochs: 37, Learning rate: 0.00879336262027036, Batch size: 36
+Epoch: 37, Loss: 0.496
+Train RMSE: 0.751 RMSE
+Test RMSE: 0.720 RMSE
+
+Run 3: Best parameters: Hidden size: 44, Time steps: 24, Epochs: 28, Learning rate: 0.0074565680260847336, Batch size: 30
+
+Epoch: 28, Loss: 0.215
+Train RMSE: 0.737 RMSE
+Test RMSE: 0.724 RMSE
 """
