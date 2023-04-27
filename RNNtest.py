@@ -11,7 +11,6 @@ from torch.optim import Adam
 from bayes_opt import BayesianOptimization
 
 batch_size = 32
-device = torch.device("mps")
 
 inp = int(input("1. MSE\n2. MAE \n3. Huber\n"))
 if inp == 1:
@@ -171,9 +170,9 @@ if __name__ == '__main__':
     test_data = impute_missing_values(test_data)
 
     pbounds = {
-        'hidden_size': (32, 128),
-        'time_steps': (1, 5),
-        'epochs': (10, 50)
+        'hidden_size': (16, 64),
+        'time_steps': (1, 20),
+        'epochs': (10, 40)
     }
 
     optimizer = BayesianOptimization(
@@ -195,8 +194,6 @@ if __name__ == '__main__':
 
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
     optimizer = Adam(lstm_agent.parameters(), lr=0.001)
-    #criterion = nn.L1Loss()
-    criterion = nn.MSELoss()
 
     trainX, trainY = get_XY(train_data, time_steps)
     testX, testY = get_XY(test_data, time_steps)
