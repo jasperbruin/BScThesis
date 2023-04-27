@@ -10,6 +10,7 @@ from torch import nn
 from torch.optim import Adam
 from bayes_opt import BayesianOptimization
 
+batch_size = 32
 device = torch.device("mps")
 
 inp = int(input("1. MSE\n2. MAE \n3. Huber\n"))
@@ -86,10 +87,11 @@ def create_training_traces(env, mode, inp):
 
 
 def train_and_evaluate(params):
-    hidden_size, time_steps, epochs, lr, batch_size = [int(p) for p in params[:-1]] + [params[-1]]
-    batch_size = int(batch_size)
+    hidden_size, time_steps, epochs = map(int, params)
+
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
-    optimizer = Adam(lstm_agent.parameters(), lr=lr)
+    optimizer = Adam(lstm_agent.parameters(), lr=0.001)
+    criterion = nn.L1Loss()
 
     trainX, trainY = get_XY(train_data, time_steps)
     testX, testY = get_XY(test_data, time_steps)
@@ -122,8 +124,8 @@ def train_and_evaluate(params):
     return train_rmse, test_rmse
 
 
-def optimize_lstm_agent(hidden_size, time_steps, epochs, lr, batch_size):
-    _, test_rmse = train_and_evaluate((hidden_size, time_steps, epochs, lr, batch_size))
+def optimize_lstm_agent(epochs, hidden_size, time_steps):
+    _, test_rmse = train_and_evaluate((hidden_size, time_steps, epochs))
     return -test_rmse
 
 
@@ -169,17 +171,13 @@ if __name__ == '__main__':
     test_data = impute_missing_values(test_data)
 
     pbounds = {
-        'hidden_size': (16, 64),
-        'time_steps': (1, 50),
-        'epochs': (10, 50),
-        'lr': (1e-4, 1e-2),
-        'batch_size': (16, 64)
+        'hidden_size': (32, 128),
+        'time_steps': (1, 5),
+        'epochs': (10, 50)
     }
 
     optimizer = BayesianOptimization(
-        f=lambda hidden_size, time_steps, epochs, lr,
-                 batch_size: optimize_lstm_agent(hidden_size, time_steps,
-                                                 epochs, lr, batch_size),
+        f=optimize_lstm_agent,
         pbounds=pbounds,
         verbose=2,
         random_state=1,
@@ -191,14 +189,14 @@ if __name__ == '__main__':
     hidden_size = int(best_params['hidden_size'])
     time_steps = int(best_params['time_steps'])
     epochs = int(best_params['epochs'])
-    lr = best_params['lr']
-    batch_size = int(best_params['batch_size'])
 
     print(
-        f"Best parameters: Hidden size: {hidden_size}, Time steps: {time_steps}, Epochs: {epochs}, Learning rate: {lr}, Batch size: {batch_size}")
+        f"Best parameters: Hidden size: {hidden_size}, Time steps: {time_steps}, Epochs: {epochs}")
 
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
-    optimizer = Adam(lstm_agent.parameters(), lr=lr)
+    optimizer = Adam(lstm_agent.parameters(), lr=0.001)
+    #criterion = nn.L1Loss()
+    criterion = nn.MSELoss()
 
     trainX, trainY = get_XY(train_data, time_steps)
     testX, testY = get_XY(test_data, time_steps)
@@ -207,6 +205,8 @@ if __name__ == '__main__':
     trainY = torch.tensor(trainY, dtype=torch.float32)
     testX = torch.tensor(testX, dtype=torch.float32)
     testY = torch.tensor(testY, dtype=torch.float32)
+
+
 
     # Training loop
     for epoch in range(epochs):
