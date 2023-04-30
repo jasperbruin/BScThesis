@@ -30,13 +30,15 @@ class baselineAgent:
         return action
 
 class SlidingWindowUCBAgent:
-    def __init__(self, window_size=100):
+    def __init__(self, window_size=1000):
         self.counts = None
         self.values = None
         self.c = 3
         self.window_size = window_size
         self.recent_rewards = None
         self.recent_counts = None
+        self.recent_rewards_sum = None
+        self.recent_counts_sum = None
         self.total_time_steps = 0
 
     def initialize(self, n_actions):
@@ -44,6 +46,8 @@ class SlidingWindowUCBAgent:
         self.values = np.zeros(n_actions)
         self.recent_rewards = [deque(maxlen=self.window_size) for _ in range(n_actions)]
         self.recent_counts = [deque(maxlen=self.window_size) for _ in range(n_actions)]
+        self.recent_rewards_sum = np.zeros(n_actions)
+        self.recent_counts_sum = np.zeros(n_actions)
 
     def get_action(self):
         if self.counts.min() == 0:
@@ -52,26 +56,29 @@ class SlidingWindowUCBAgent:
             action[idx] = 1
         else:
             min_time_steps = min(self.total_time_steps, self.window_size)
-            recent_counts_sum = np.array([sum(counts) for counts in self.recent_counts])
-            ucb_values = self.values + self.c * np.sqrt(2 * np.log(min_time_steps) / recent_counts_sum)
+            ucb_values = self.values + self.c * np.sqrt(2 * np.log(min_time_steps) / self.recent_counts_sum)
             action = ucb_values
         return action
-
 
     def update(self, actions, state):
         self.total_time_steps += 1
         for i, reward in enumerate(state):
             if reward >= 0:
                 self.counts[i] += 1
+                self.values[i] = self.values[i] + (1 / self.counts[i]) * (
+                            reward - self.values[i])
+
+                if len(self.recent_rewards[i]) == self.window_size:
+                    self.recent_rewards_sum[i] -= self.recent_rewards[i][0]
+                    self.recent_counts_sum[i] -= self.recent_counts[i][0]
+
                 self.recent_rewards[i].append(reward)
                 self.recent_counts[i].append(1)
-
-                # Calculate the average reward based on the sliding window
-                avg_reward = sum(self.recent_rewards[i]) / sum(self.recent_counts[i])
-                self.values[i] = avg_reward
+                self.recent_rewards_sum[i] += reward
+                self.recent_counts_sum[i] += 1
             else:
                 self.counts[i] += 0
-                self.recent_counts[i].append(0)
+
 
 class DiscountedUCBAgent:
     def __init__(self, gamma=0.9):
