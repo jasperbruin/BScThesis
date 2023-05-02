@@ -11,7 +11,7 @@ import time
 def SWUCBExperiment():
     np.random.seed(0)
     env = ROFARS_v1()
-    max_window_size = 1000
+    max_window_size = 100
     best_window_size = 1
     best_reward = -np.inf
 
@@ -19,7 +19,7 @@ def SWUCBExperiment():
     total_rewards = []
 
     # Find the best sliding window in the training session
-    for window_size in range(100, max_window_size + 1):
+    for window_size in range(1, max_window_size + 1):
         agent = SlidingWindowUCBAgent(window_size=window_size * 60)
         agent.initialize(env.n_camera)
 
@@ -467,18 +467,17 @@ Baseline:
 Strong: 0.506 Weak: 0.317
 
 
-Run 1 SW-UCB best window size = 50 * 60:
-== TRAINING===
-[total reward]: 0.563                      
-====== TESTING======
-[total reward]: 0.524
+Run 1 SW-UCB best window size = 1 * 60:
+====== TESTING window size ======
+[total reward]: 0.553
+Best window size: 1
+Best [total reward]: 0.591
 
-Difference Strong Baseline = Run 1 - Baseline = 0.524 - 0.506 = 0.018
-Percentage growth = (Difference / Baseline) x 100 = 0.018 / 0.506 x 100 = 3.6%
+Difference Strong Baseline = Run 1 - Baseline = 0.553 - 0.506 = 0.047
+Percentage growth = (Difference / Baseline) x 100 = 0.047 / 0.506 x 100 = 9.3%
 
-Difference Weak Baseline = Run 1 - Baseline = 0.524 - 0.317 = 0.207
-Percentage growth = (Difference / Baseline) x 100 = 0.207 / 0.317 x 100 = 65.3%
-Growth: 65.3%.
+Difference Weak Baseline = Run 1 - Baseline = 0.553 - 0.317 = 0.236
+Percentage growth = (Difference / Baseline) x 100 = 0.236 / 0.317 x 100 = 74.4%
 
 
 Run 2 UCB1:                                             

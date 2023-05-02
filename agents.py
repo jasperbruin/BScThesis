@@ -56,7 +56,9 @@ class SlidingWindowUCBAgent:
             action[idx] = 1
         else:
             min_time_steps = min(self.total_time_steps, self.window_size)
-            ucb_values = self.values + self.c * np.sqrt(2 * np.log(min_time_steps) / self.recent_counts_sum)
+            recent_values = self.recent_rewards_sum / self.recent_counts_sum
+            ucb_values = recent_values + self.c * np.sqrt(
+                2 * np.log(min_time_steps) / self.recent_counts_sum)
             action = ucb_values
         return action
 
@@ -65,8 +67,6 @@ class SlidingWindowUCBAgent:
         for i, reward in enumerate(state):
             if reward >= 0:
                 self.counts[i] += 1
-                self.values[i] = self.values[i] + (1 / self.counts[i]) * (
-                            reward - self.values[i])
 
                 if len(self.recent_rewards[i]) == self.window_size:
                     self.recent_rewards_sum[i] -= self.recent_rewards[i][0]
