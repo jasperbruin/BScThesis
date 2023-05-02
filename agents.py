@@ -170,7 +170,7 @@ class LSTM_Agent(nn.Module):
         x, _ = self.lstm(state)
         x = x[:, -1, :]
         x = self.dense(x)
-        x = torch.relu(x)
+        #x = torch.relu(x)
         return x
 
     def initialize(self, n_actions):
