@@ -11,6 +11,7 @@ from torch.optim import Adam
 from bayes_opt import BayesianOptimization
 
 batch_size = 32
+criterion = None
 
 inp = int(input("1. MSE\n2. MAE \n3. Huber\n"))
 if inp == 1:

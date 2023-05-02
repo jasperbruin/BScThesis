@@ -167,23 +167,9 @@ class LSTM_Agent(nn.Module):
         self.hidden_size = hidden_size
 
     def forward(self, state):
+        #print(f"State shape: {state.shape}")
         x, _ = self.lstm(state)
         x = x[:, -1, :]
         x = self.dense(x)
         #x = torch.relu(x)
         return x
-
-    def initialize(self, n_actions):
-        pass
-
-    def get_action(self, state):
-        state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
-        with torch.no_grad():
-            output = self.forward(state_tensor)
-        action = output.numpy().squeeze()
-        return action
-
-    def update(self, actions, state):
-        for i, reward in enumerate(state):
-            if reward >= 0:
-                self.records[i].append(reward)

@@ -9,6 +9,7 @@ import torch
 from torch import nn
 from torch.optim import Adam
 from bayes_opt import BayesianOptimization
+from collections import deque
 
 batch_size = 32
 
@@ -163,10 +164,18 @@ if __name__ == '__main__':
     init_action = np.random.rand(env.n_camera)
     reward, state, stop = env.step(init_action)
 
+    last_states = deque(maxlen=time_steps - 1)
+
     for t in tqdm(range(env.length), initial=2):
 
+        # Add the current state to the last_states deque
+        last_states.append(state)
+
         # Prepare the input state for the LSTM agent
-        input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(0)
+        input_state = np.vstack(list(last_states) + [
+            state])  # Combine the last_states with the current state
+        input_state = torch.tensor(input_state, dtype=torch.float32).unsqueeze(
+            0)  # Add the batch dimension
 
         # Get the action from the LSTM agent
         action = lstm_agent(input_state).squeeze().detach().numpy()
@@ -176,6 +185,9 @@ if __name__ == '__main__':
 
         if stop:
             break
+
+    # Plot the result
+    print(env.get_total_reward())
 
 """
 -- activation: None
