@@ -469,15 +469,15 @@ Strong: 0.506 Weak: 0.317
 
 Run 1 SW-UCB best window size = 1 * 60:
 ====== TESTING window size ======
-[total reward]: 0.553
-Best window size: 1
-Best [total reward]: 0.591
+[total reward]: 0.562
+Best window size: 9
+Best [total reward]: 0.589
 
-Difference Strong Baseline = Run 1 - Baseline = 0.553 - 0.506 = 0.047
-Percentage growth = (Difference / Baseline) x 100 = 0.047 / 0.506 x 100 = 9.3%
+Difference Strong Baseline = Run 1 - Baseline = 0.562 - 0.506 = 0.056
+Percentage growth = (Difference / Baseline) x 100 = 0.056 / 0.506 x 100 = 11.1%
 
-Difference Weak Baseline = Run 1 - Baseline = 0.553 - 0.317 = 0.236
-Percentage growth = (Difference / Baseline) x 100 = 0.236 / 0.317 x 100 = 74.4%
+Difference Weak Baseline = Run 1 - Baseline = 0.562 - 0.317 = 0.245
+Percentage growth = (Difference / Baseline) x 100 = 0.245 / 0.317 x 100 = 77.3%
 
 
 Run 2 UCB1:                                             

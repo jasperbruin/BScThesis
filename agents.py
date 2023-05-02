@@ -78,6 +78,8 @@ class SlidingWindowUCBAgent:
                 self.recent_counts_sum[i] += 1
             else:
                 self.counts[i] += 0
+                self.recent_rewards[i].append(0)
+                self.recent_counts[i].append(0)
 
 
 class DiscountedUCBAgent:
