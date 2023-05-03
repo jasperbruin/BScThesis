@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
     hidden_size = 32
     time_steps = 19
-    epochs = 39
+    epochs = 5
 
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
     optimizer = Adam(lstm_agent.parameters(), lr=0.001)
@@ -171,7 +171,9 @@ if __name__ == '__main__':
 
         # Add the current state to the last_states deque
         last_states.append(state)
-        action = lstm_agent.get_action(torch.tensor([last_states], dtype=torch.float32))
+        print(last_states)
+        action = lstm_agent.get_action(torch.tensor([last_states], dtype=torch.float32), last_states)
+
 
 
         # Perform the action in the environment
