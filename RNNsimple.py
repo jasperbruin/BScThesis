@@ -69,6 +69,10 @@ def impute_missing_values(states):
         imputed_states.append(imputed_state)
     return np.array(imputed_states)
 
+def imv(state):
+    mean_value = np.mean([v for v in state if v >= 0])
+    imputed_state = np.array([v if v >= 0 else mean_value for v in state])
+    return imputed_state
 
 
 def create_training_traces(env, mode, inp):
@@ -156,7 +160,7 @@ if __name__ == '__main__':
 
     hidden_size = 32
     time_steps = 19
-    epochs = 39
+    epochs = 38
 
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
     optimizer = Adam(lstm_agent.parameters(), lr=0.001)
@@ -193,8 +197,13 @@ if __name__ == '__main__':
 
     for t in tqdm(range(env.length), initial=2):
 
+        state = imv(state)
+
         # Add the current state to the last_states deque
         last_states.append(state)
+
+
+
 
         # Prepare the input state for the LSTM agent
         input_state = np.vstack(list(last_states) + [state])  # Combine the last_states with the current state
