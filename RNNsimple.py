@@ -27,6 +27,15 @@ class LSTM_Agent(nn.Module):
         #x = torch.relu(x)
         return x
 
+    def get_action(self, state, last_states):
+        # Prepare the input state for the LSTM agent
+        input_state = np.vstack(list(last_states) + [state])  # Combine the last_states with the current state
+        input_state = torch.tensor(input_state, dtype=torch.float32).unsqueeze(0)  # Add the batch dimension
+        # Get the action from the LSTM agent
+        action = self.lstm_agent(input_state).squeeze().detach().numpy()
+
+        return action
+
 batch_size = 32
 
 inp = int(input("1. MSE\n2. MAE \n3. Huber\n"))
@@ -186,13 +195,7 @@ if __name__ == '__main__':
 
         # Add the current state to the last_states deque
         last_states.append(state)
-
-        # Prepare the input state for the LSTM agent
-        input_state = np.vstack(list(last_states) + [state])  # Combine the last_states with the current state
-        input_state = torch.tensor(input_state, dtype=torch.float32).unsqueeze(0)  # Add the batch dimension
-
-        # Get the action from the LSTM agent
-        action = lstm_agent(input_state).squeeze().detach().numpy()
+        action = lstm_agent.get_action(torch.tensor([last_states], dtype=torch.float32))
 
 
         # Perform the action in the environment
