@@ -166,19 +166,13 @@ class LSTM_Agent(nn.Module):
         self.records = [[] for _ in range(input_size)]
         self.hidden_size = hidden_size
 
-    def forward(self, state):
-        #print(f"State shape: {state.shape}")
-        x, _ = self.lstm(state)
+    def forward(self, state, hidden_cell):
+        x, hidden_cell = self.lstm(state, hidden_cell)
         x = x[:, -1, :]
         x = self.dense(x)
-        #x = torch.relu(x)
-        return x
+        return x, hidden_cell
 
-    def get_action(self, state, last_states):
-        # Prepare the input state for the LSTM agent
-        input_state = np.vstack(list(last_states) + [state])  # Combine the last_states with the current state
-        input_state = torch.tensor(input_state, dtype=torch.float32).unsqueeze(0)  # Add the batch dimension
-        # Get the action from the LSTM agent
-        action = self.lstm_agent(input_state).squeeze().detach().numpy()
-
-        return action
+    def init_hidden_cell_states(self, batch_size):
+        hidden_state = torch.zeros(1, batch_size, self.hidden_size)
+        cell_state = torch.zeros(1, batch_size, self.hidden_size)
+        return hidden_state, cell_state

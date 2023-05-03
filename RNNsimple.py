@@ -1,46 +1,13 @@
 import numpy as np
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
-from agents import baselineAgent, DiscountedUCBAgent
+from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent
 import torch
 from torch import nn
 from torch.optim import Adam
 from collections import deque
 
-class LSTM_Agent(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
-        super(LSTM_Agent, self).__init__()
-        self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
-        self.dense = nn.Linear(hidden_size, output_size)
-        self.records = [[] for _ in range(input_size)]
-        self.hidden_size = hidden_size
-
-    def forward(self, state):
-        #print(f"State shape: {state.shape}")
-        x, _ = self.lstm(state)
-        x = x[:, -1, :]
-        x = self.dense(x)
-        #x = torch.relu(x)
-        return x
-
-    def get_action(self, state, last_states):
-        # Prepare the input state for the LSTM agent
-        input_state = np.vstack(list(last_states) + [state])  # Combine the last_states with the current state
-        input_state = torch.tensor(input_state, dtype=torch.float32).unsqueeze(0)  # Add the batch dimension
-        # Get the action from the LSTM agent
-        action = self.lstm_agent(input_state).squeeze().detach().numpy()
-
-        return action
-
 batch_size = 32
-
-inp = int(input("1. MSE\n2. MAE \n3. Huber\n"))
-if inp == 1:
-    criterion = nn.MSELoss()
-if inp == 2:
-    criterion = nn.L1Loss()
-if inp == 3:
-    criterion = nn.SmoothL1Loss()
 
 def get_train_test(states, split_percent=0.8):
     n = len(states)
@@ -113,6 +80,14 @@ def create_training_traces(env, mode, inp):
 
 
 if __name__ == '__main__':
+    inp = int(input("1. MSE\n2. MAE \n3. Huber\n"))
+    if inp == 1:
+        criterion = nn.MSELoss()
+    if inp == 2:
+        criterion = nn.L1Loss()
+    if inp == 3:
+        criterion = nn.SmoothL1Loss()
+
     np.random.seed(0)
 
     env = ROFARS_v1()
@@ -130,8 +105,8 @@ if __name__ == '__main__':
 
 
     hidden_size = 32
-    time_steps = 19
-    epochs = 3
+    time_steps = 9*60
+    epochs = 10
 
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
     optimizer = Adam(lstm_agent.parameters(), lr=0.001)
@@ -145,13 +120,24 @@ if __name__ == '__main__':
     testY = torch.tensor(testY, dtype=torch.float32)
 
     # Training loop
+    print('Training LSTM Agent')
     for epoch in range(epochs):
         for i in range(0, len(trainX), batch_size):
             x_batch = trainX[i: i + batch_size]
             y_batch = trainY[i: i + batch_size]
 
+            # Initialize the hidden and cell states for the LSTM agent with the correct batch size
+            hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
+                batch_size=x_batch.size(0))
+
             optimizer.zero_grad()
-            outputs = lstm_agent(x_batch)
+            # Pass the hidden and cell states to the LSTM agent
+            outputs, (hidden_state, cell_state) = lstm_agent(x_batch, (
+            hidden_state, cell_state))
+            # Detach the hidden and cell states to avoid backpropagating through the entire history
+            hidden_state = hidden_state.detach()
+            cell_state = cell_state.detach()
+
             loss = criterion(outputs, y_batch)
             loss.backward()
             optimizer.step()
@@ -159,27 +145,27 @@ if __name__ == '__main__':
         print(f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}')
 
     # Testing loop
+    print('Testing LSTM Agent')
     env.reset(mode='test')
     # give random scores as the initial action
     init_action = np.random.rand(env.n_camera)
     reward, state, stop = env.step(init_action)
 
-    last_states = deque(maxlen=time_steps - 1)
+    # Initialize the hidden and cell states for the LSTM agent
+    hidden_state, cell_state = lstm_agent.init_hidden_cell_states(batch_size=1)
 
     for t in tqdm(range(env.length), initial=2):
 
         # Impute the missing values in the state
         state = imv(state)
 
-        # Add the current state to the last_states deque
-        last_states.append(state)
         # Prepare the input state for the LSTM agent
-        input_state = np.vstack(list(last_states) + [state])  # Combine the last_states with the current state
-        input_state = torch.tensor(input_state, dtype=torch.float32).unsqueeze(0)  # Add the batch dimension
+        input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(0).unsqueeze(0)  # Add the batch and sequence dimensions
 
-        # Get the action from the LSTM agent
-        action = lstm_agent(input_state).squeeze().detach().numpy()
-
+        # Get the action from the LSTM agent, passing the hidden and cell states
+        action, (hidden_state, cell_state) = lstm_agent(input_state, (
+        hidden_state, cell_state))
+        action = action.squeeze().detach().numpy()
 
         # Perform the action in the environment
         reward, state, stop = env.step(action)
@@ -187,5 +173,6 @@ if __name__ == '__main__':
         if stop:
             break
 
-    print(f'====== TESTING ======')
+    print(f'====== RESULT ======')
     print('[total reward]:', env.get_total_reward())
+
