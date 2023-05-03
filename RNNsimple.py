@@ -2,7 +2,7 @@ import math
 import numpy as np
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
-from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent
+from agents import baselineAgent, DiscountedUCBAgent
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 import torch
@@ -10,6 +10,22 @@ from torch import nn
 from torch.optim import Adam
 from bayes_opt import BayesianOptimization
 from collections import deque
+
+class LSTM_Agent(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(LSTM_Agent, self).__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
+        self.dense = nn.Linear(hidden_size, output_size)
+        self.records = [[] for _ in range(input_size)]
+        self.hidden_size = hidden_size
+
+    def forward(self, state):
+        #print(f"State shape: {state.shape}")
+        x, _ = self.lstm(state)
+        x = x[:, -1, :]
+        x = self.dense(x)
+        #x = torch.relu(x)
+        return x
 
 batch_size = 32
 
@@ -45,8 +61,8 @@ def impute_missing_values(states):
     return np.array(imputed_states)
 
 
-def create_training_traces(env, mode, inp):
 
+def create_training_traces(env, mode, inp):
     # Training
     env.reset(mode)
     if inp == 1:
@@ -172,13 +188,12 @@ if __name__ == '__main__':
         last_states.append(state)
 
         # Prepare the input state for the LSTM agent
-        input_state = np.vstack(list(last_states) + [
-            state])  # Combine the last_states with the current state
-        input_state = torch.tensor(input_state, dtype=torch.float32).unsqueeze(
-            0)  # Add the batch dimension
+        input_state = np.vstack(list(last_states) + [state])  # Combine the last_states with the current state
+        input_state = torch.tensor(input_state, dtype=torch.float32).unsqueeze(0)  # Add the batch dimension
 
         # Get the action from the LSTM agent
         action = lstm_agent(input_state).squeeze().detach().numpy()
+
 
         # Perform the action in the environment
         reward, state, stop = env.step(action)
@@ -186,8 +201,10 @@ if __name__ == '__main__':
         if stop:
             break
 
-    # Plot the result
-    print(env.get_total_reward())
+    print(f'====== TESTING ======')
+    print('[total reward]:', env.get_total_reward())
+
+
 
 """
 -- activation: None
