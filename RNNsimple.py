@@ -1,14 +1,10 @@
-import math
 import numpy as np
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
 from agents import baselineAgent, DiscountedUCBAgent
-from sklearn.metrics import mean_squared_error
-import matplotlib.pyplot as plt
 import torch
 from torch import nn
 from torch.optim import Adam
-from bayes_opt import BayesianOptimization
 from collections import deque
 
 class LSTM_Agent(nn.Module):
@@ -116,31 +112,6 @@ def create_training_traces(env, mode, inp):
 
 
 
-
-# Plot the result
-def plot_result(trainY, testY, train_predict, test_predict):
-    actual = np.append(trainY, testY)
-    predictions = np.append(train_predict, test_predict)
-    rows = len(actual)
-    plt.figure(figsize=(15, 6), dpi=80)
-    plt.plot(range(rows), actual)
-    plt.plot(range(rows), predictions)
-    plt.axvline(x=len(trainY), color='r')
-    plt.legend(['Actual', 'Predictions'])
-    plt.xlabel('Observation number after given time steps')
-    plt.ylabel('Sunspots scaled')
-    plt.title('Actual and Predicted Values. The Red Line Separates The Training And Test Examples')
-    plt.show()
-
-def print_error(trainY, testY, train_predict, test_predict):
-    # Error of predictions
-    train_rmse = math.sqrt(mean_squared_error(trainY, train_predict))
-    test_rmse = math.sqrt(mean_squared_error(testY, test_predict))
-    # Print RMSE
-    print('Train RMSE: %.3f RMSE' % (train_rmse))
-    print('Test RMSE: %.3f RMSE' % (test_rmse))
-
-
 if __name__ == '__main__':
     np.random.seed(0)
 
@@ -160,7 +131,7 @@ if __name__ == '__main__':
 
     hidden_size = 32
     time_steps = 19
-    epochs = 38
+    epochs = 3
 
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
     optimizer = Adam(lstm_agent.parameters(), lr=0.001)
@@ -197,6 +168,7 @@ if __name__ == '__main__':
 
     for t in tqdm(range(env.length), initial=2):
 
+        # Impute the missing values in the state
         state = imv(state)
 
         # Add the current state to the last_states deque
@@ -204,7 +176,6 @@ if __name__ == '__main__':
         # Prepare the input state for the LSTM agent
         input_state = np.vstack(list(last_states) + [state])  # Combine the last_states with the current state
         input_state = torch.tensor(input_state, dtype=torch.float32).unsqueeze(0)  # Add the batch dimension
-
 
         # Get the action from the LSTM agent
         action = lstm_agent(input_state).squeeze().detach().numpy()
@@ -218,24 +189,3 @@ if __name__ == '__main__':
 
     print(f'====== TESTING ======')
     print('[total reward]:', env.get_total_reward())
-
-
-
-"""
--- activation: None
-Baseline Agent results, huber loss:
-Best parameters: Hidden size: 28, Time steps: 19, Epochs: 39
-Train RMSE: 0.724 RMSE
-Test RMSE: 0.703 RMSE
-
-UCB Agent results, huber loss:
-Best parameters: Hidden size: 28, Time steps: 20, Epochs: 16
-Epoch: 16, Loss: 0.23
-Train RMSE: 0.723 RMSE
-Test RMSE: 0.704 RMSE
-
-
---------
--- activation: relu
-Baseline Agent results, huber loss:
-"""
