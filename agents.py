@@ -173,3 +173,12 @@ class LSTM_Agent(nn.Module):
         x = self.dense(x)
         #x = torch.relu(x)
         return x
+
+    def get_action(self, state, last_states):
+        # Prepare the input state for the LSTM agent
+        input_state = np.vstack(list(last_states) + [state])  # Combine the last_states with the current state
+        input_state = torch.tensor(input_state, dtype=torch.float32).unsqueeze(0)  # Add the batch dimension
+        # Get the action from the LSTM agent
+        action = self.lstm_agent(input_state).squeeze().detach().numpy()
+
+        return action
