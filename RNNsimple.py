@@ -5,7 +5,7 @@ from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent
 import torch
 from torch import nn
 from torch.optim import Adam
-from collections import deque
+import matplotlib.pyplot as plt
 
 batch_size = 32
 
@@ -41,6 +41,7 @@ def imv(state):
 def create_training_traces(env, mode, inp):
     # Training
     env.reset(mode)
+    rewards = []
     if inp == 1:
         baseline_agent = baselineAgent()
         states = []
@@ -53,11 +54,13 @@ def create_training_traces(env, mode, inp):
             action = baseline_agent.get_action(state)
             reward, state, stop = env.step(action)
 
+            rewards.append(reward)
             states.append(state)
             if stop:
                 break
 
-        return states
+        return states, rewards
+
     elif inp == 2:
         states = []
         agent = DiscountedUCBAgent(gamma=0.999)
@@ -70,14 +73,23 @@ def create_training_traces(env, mode, inp):
             # Update the UCB Agent
             agent.update(action, state)
 
+            rewards.append(reward)
             states.append(state)
 
             if stop:
                 break
 
-        return states
+        return states, rewards
 
-
+def plot_rewards(rewards, rewards_lstm):
+    plt.plot(rewards, label='UCB Agent')
+    plt.plot(rewards_lstm, label='LSTM Agent')
+    plt.xlabel('Time Steps')
+    plt.ylabel('Reward')
+    plt.title('Rewards Comparison')
+    plt.legend()
+    plt.savefig('rewardsComparison.png')
+    plt.show()
 
 if __name__ == '__main__':
     inp = int(input("1. MSE\n2. MAE \n3. Huber\n"))
@@ -95,18 +107,19 @@ if __name__ == '__main__':
     input_size = env.n_camera
     output_size = env.n_camera
     inp = int(input("1. Baseline Agent 2. UCB Agent: "))
+    hidden_size = 32
+    time_steps = 5
+    epochs = 5
 
-    train_data = create_training_traces(env, 'train', inp)
-    test_data = create_training_traces(env, 'test', inp)
+    train_data, train_rewards = create_training_traces(env, 'train', inp)
+    test_data, test_rewards = create_training_traces(env, 'test', inp)
 
     train_data = impute_missing_values(train_data)
     test_data = impute_missing_values(test_data)
     criterion = nn.SmoothL1Loss()
 
 
-    hidden_size = 32
-    time_steps = 9*60
-    epochs = 10
+
 
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
     optimizer = Adam(lstm_agent.parameters(), lr=0.001)
@@ -147,6 +160,7 @@ if __name__ == '__main__':
     # Testing loop
     print('Testing LSTM Agent')
     env.reset(mode='test')
+    reward_threshold = 0.2  # Adjust the threshold value as needed
     # give random scores as the initial action
     init_action = np.random.rand(env.n_camera)
     reward, state, stop = env.step(init_action)
@@ -155,12 +169,10 @@ if __name__ == '__main__':
     hidden_state, cell_state = lstm_agent.init_hidden_cell_states(batch_size=1)
 
     for t in tqdm(range(env.length), initial=2):
-
-        # Impute the missing values in the state
         state = imv(state)
-
         # Prepare the input state for the LSTM agent
-        input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(0).unsqueeze(0)  # Add the batch and sequence dimensions
+        input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(
+            0).unsqueeze(0)  # Add the batch and sequence dimensions
 
         # Get the action from the LSTM agent, passing the hidden and cell states
         action, (hidden_state, cell_state) = lstm_agent(input_state, (
@@ -170,9 +182,17 @@ if __name__ == '__main__':
         # Perform the action in the environment
         reward, state, stop = env.step(action)
 
+
+        # Visualize input states, LSTM agent's actions, and Baseline/UCB agent's actions for low rewards
+        if reward < reward_threshold:
+            print("state:", state)
+            print("action:", action)
+            print("reward:", reward)
+
         if stop:
             break
 
     print(f'====== RESULT ======')
     print('[total reward]:', env.get_total_reward())
+
 

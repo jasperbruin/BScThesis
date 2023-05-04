@@ -86,6 +86,69 @@ def create_training_traces(env, mode, inp):
         return states
 
 
+def train_and_evaluate(params):
+    time_steps, epochs = map(int, params)
+
+    hidden_size = 32
+
+    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
+    optimizer = Adam(lstm_agent.parameters(), lr=0.01)
+    criterion = nn.L1Loss()
+
+    trainX, trainY = get_XY(train_data, time_steps)
+    testX, testY = get_XY(test_data, time_steps)
+
+    trainX = torch.tensor(trainX, dtype=torch.float32)
+    trainY = torch.tensor(trainY, dtype=torch.float32)
+    testX = torch.tensor(testX, dtype=torch.float32)
+    testY = torch.tensor(testY, dtype=torch.float32)
+
+    # Training loop
+    for epoch in range(epochs):
+        for i in range(0, len(trainX), batch_size):
+            x_batch = trainX[i : i + batch_size]
+            y_batch = trainY[i : i + batch_size]
+
+            # Initialize the hidden and cell states for the LSTM agent with the correct batch size
+            hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
+                batch_size=x_batch.size(0))
+
+            optimizer.zero_grad()
+            outputs, (hidden_state, cell_state) = lstm_agent(x_batch, (hidden_state, cell_state))
+            # Detach the hidden and cell states to avoid backpropagating through the entire history
+            hidden_state = hidden_state.detach()
+            cell_state = cell_state.detach()
+
+            loss = criterion(outputs, y_batch)
+            loss.backward()
+            optimizer.step()
+
+    # Initialize the hidden and cell states for the LSTM agent with the correct batch size
+    hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
+        batch_size=trainX.size(0))
+    # Make predictions on train data
+    train_predict, _ = lstm_agent(trainX, (hidden_state, cell_state))
+    train_predict = train_predict.detach().numpy()
+
+    # Initialize the hidden and cell states for the LSTM agent with the correct batch size
+    hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
+        batch_size=testX.size(0))
+    # Make predictions on test data
+    test_predict, _ = lstm_agent(testX, (hidden_state, cell_state))
+    test_predict = test_predict.detach().numpy()
+
+    # Print error
+    train_rmse = math.sqrt(mean_squared_error(trainY.numpy(), train_predict))
+    test_rmse = math.sqrt(mean_squared_error(testY.numpy(), test_predict))
+
+    return train_rmse, test_rmse
+
+
+
+def optimize_lstm_agent(epochs, time_steps):
+    _, test_rmse = train_and_evaluate((time_steps, epochs))
+    return -test_rmse
+
 
 
 
@@ -139,9 +202,27 @@ if __name__ == '__main__':
     train_data = impute_missing_values(train_data)
     test_data = impute_missing_values(test_data)
 
+    pbounds = {
+        'time_steps': (9*60, 20*60),
+        'epochs': (1, 5)
+    }
+
+    optimizer = BayesianOptimization(
+        f=optimize_lstm_agent,
+        pbounds=pbounds,
+        verbose=2,
+        random_state=1,
+    )
+
+    optimizer.maximize(init_points=5, n_iter=10)
+
+    best_params = optimizer.max['params']
     hidden_size = 32
-    epochs = 5
-    time_steps = [9*60, 10*60, 11*60, 12*60]
+    time_steps = int(best_params['time_steps'])
+    epochs = int(best_params['epochs'])
+
+    print(
+        f"Best parameters: Hidden size: {hidden_size}, Time steps: {time_steps}, Epochs: {epochs}")
 
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
     optimizer = Adam(lstm_agent.parameters(), lr=0.01)
@@ -180,6 +261,8 @@ if __name__ == '__main__':
             optimizer.step()
 
         print(f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}')
+
+
 
 
     # Make predictions
