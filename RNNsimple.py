@@ -6,8 +6,10 @@ import torch
 from torch import nn
 from torch.optim import Adam
 import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
 
 batch_size = 32
+l_rate = 0.001
 baseline_agent = None
 agent = None
 
@@ -41,6 +43,35 @@ def imv(state):
     imputed_state = np.array([v if v >= 0 else mean_value for v in state])
     return imputed_state
 
+# def impute_missing_values(states):
+#     imputed_states = []
+#     for state in states:
+#         # Get the indices of the non-missing values
+#         indices = np.where(state >= 0)[0]
+#
+#         # Get the values of the non-missing values
+#         values = state[indices]
+#
+#         # Use nearest neighbor interpolation to fill in the missing values
+#         f = interp1d(indices, values, kind='nearest', fill_value='extrapolate')
+#         imputed_state = f(np.arange(len(state)))
+#
+#         imputed_states.append(imputed_state)
+#     return np.array(imputed_states)
+#
+#
+# def imv(state):
+#     # Get the indices of the non-missing values
+#     indices = np.where(state >= 0)[0]
+#
+#     # Get the values of the non-missing values
+#     values = state[indices]
+#
+#     # Use nearest neighbor interpolation to fill in the missing values
+#     f = interp1d(indices, values, kind='nearest', fill_value='extrapolate')
+#     imputed_state = f(np.arange(len(state)))
+#
+#     return imputed_state
 
 def create_training_traces(env, mode, inp):
     # Training
@@ -109,13 +140,6 @@ def create_training_traces(env, mode, inp):
 
         return states
 
-def plot_heatmap(data, title):
-    plt.figure()
-    plt.imshow(data, cmap='hot', interpolation='nearest')
-    plt.title(title)
-    plt.colorbar()
-    plt.show()
-
 if __name__ == '__main__':
     inp = int(input("1. MSE\n2. MAE \n3. Huber\n"))
     if inp == 1:
@@ -147,7 +171,7 @@ if __name__ == '__main__':
 
 
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
-    optimizer = Adam(lstm_agent.parameters(), lr=0.001)
+    optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
 
     trainX, trainY = get_XY(train_data, time_steps)
     testX, testY = get_XY(test_data, time_steps)

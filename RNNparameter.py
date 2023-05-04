@@ -11,6 +11,7 @@ from torch.optim import Adam
 from bayes_opt import BayesianOptimization
 
 batch_size = 32
+l_rate = 0.001
 criterion = None
 
 inp = int(input("1. MSE\n2. MAE \n3. Huber\n"))
@@ -167,7 +168,7 @@ if __name__ == '__main__':
 
     for ts in time_steps:
         lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
-        optimizer = Adam(lstm_agent.parameters(), lr=0.01)
+        optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
 
         trainX, trainY = get_XY(train_data, ts)
         testX, testY = get_XY(test_data, ts)
@@ -208,7 +209,7 @@ if __name__ == '__main__':
 
     # Train the model with the best time_step value
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
-    optimizer = Adam(lstm_agent.parameters(), lr=0.01)
+    optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
 
     trainX, trainY = get_XY(train_data, best_time_step)
     testX, testY = get_XY(test_data, best_time_step)
