@@ -140,6 +140,32 @@ def create_training_traces(env, mode, inp):
 
         return states
 
+
+def compute_differences():
+    # Filter out time steps with rewards above reward_threshold
+    filtered_time_reward_lstm = {k: v for k, v in time_reward_lstm.items() if
+                                 v < reward_threshold}
+
+    # Compute the difference between LSTM and UCB/Baseline agent rewards for each time step
+    differences = {}
+    for t in filtered_time_reward_lstm.keys():
+        lstm_reward = filtered_time_reward_lstm[t]
+        if t in time_reward_agent:
+            agent_reward = time_reward_agent[t]
+            differences[t] = abs(lstm_reward - agent_reward)
+
+    # Sort the differences by magnitude and take the top 10
+    sorted_differences = sorted(differences.items(), key=lambda x: x[1],
+                                reverse=True)[:40]
+
+    # Print the top 10 differences
+    print('Top 10 Time Steps with Highest Reward Differences')
+    for t, diff in sorted_differences:
+        lstm_reward = filtered_time_reward_lstm[t]
+        agent_reward = time_reward_agent[t]
+        print(
+            f'Time Step {t}: LSTM Reward={lstm_reward:.2f}, Agent Reward={agent_reward:.2f}, Difference={diff:.2f}')
+
 if __name__ == '__main__':
     inp = int(input("1. MSE\n2. MAE \n3. Huber\n"))
     if inp == 1:
@@ -166,8 +192,6 @@ if __name__ == '__main__':
     train_data = impute_missing_values(train_data)
     test_data = impute_missing_values(test_data)
     criterion = nn.SmoothL1Loss()
-
-
 
 
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
@@ -244,26 +268,7 @@ if __name__ == '__main__':
     print(f'====== RESULT ======')
     print('[total reward]:', env.get_total_reward())
 
-    # Filter out time steps with rewards above reward_threshold
-    filtered_time_reward_lstm = {k: v for k, v in time_reward_lstm.items() if
-                                 v < reward_threshold}
+    compute_differences()
 
-    # Compute the difference between LSTM and UCB/Baseline agent rewards for each time step
-    differences = {}
-    for t in filtered_time_reward_lstm.keys():
-        lstm_reward = filtered_time_reward_lstm[t]
-        if t in time_reward_agent:
-            agent_reward = time_reward_agent[t]
-            differences[t] = abs(lstm_reward - agent_reward)
 
-    # Sort the differences by magnitude and take the top 10
-    sorted_differences = sorted(differences.items(), key=lambda x: x[1],
-                                reverse=True)[:40]
 
-    # Print the top 10 differences
-    print('Top 10 Time Steps with Highest Reward Differences')
-    for t, diff in sorted_differences:
-        lstm_reward = filtered_time_reward_lstm[t]
-        agent_reward = time_reward_agent[t]
-        print(
-            f'Time Step {t}: LSTM Reward={lstm_reward:.2f}, Agent Reward={agent_reward:.2f}, Difference={diff:.2f}')
