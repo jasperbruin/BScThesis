@@ -8,6 +8,10 @@ from torch.optim import Adam
 import matplotlib.pyplot as plt
 
 batch_size = 32
+baseline_agent = None
+agent = None
+
+time_reward_agent = {}
 
 def get_train_test(states, split_percent=0.8):
     n = len(states)
@@ -41,7 +45,6 @@ def imv(state):
 def create_training_traces(env, mode, inp):
     # Training
     env.reset(mode)
-    rewards = []
     if inp == 1:
         baseline_agent = baselineAgent()
         states = []
@@ -54,12 +57,14 @@ def create_training_traces(env, mode, inp):
             action = baseline_agent.get_action(state)
             reward, state, stop = env.step(action)
 
-            rewards.append(reward)
             states.append(state)
+
+            time_reward_agent[t] = reward
+
             if stop:
                 break
 
-        return states, rewards
+        return states
 
     elif inp == 2:
         states = []
@@ -73,22 +78,20 @@ def create_training_traces(env, mode, inp):
             # Update the UCB Agent
             agent.update(action, state)
 
-            rewards.append(reward)
             states.append(state)
+
+            time_reward_agent[t] = reward
 
             if stop:
                 break
 
-        return states, rewards
+        return states
 
-def plot_rewards(rewards, rewards_lstm):
-    plt.plot(rewards, label='UCB Agent')
-    plt.plot(rewards_lstm, label='LSTM Agent')
-    plt.xlabel('Time Steps')
-    plt.ylabel('Reward')
-    plt.title('Rewards Comparison')
-    plt.legend()
-    plt.savefig('rewardsComparison.png')
+def plot_heatmap(data, title):
+    plt.figure()
+    plt.imshow(data, cmap='hot', interpolation='nearest')
+    plt.title(title)
+    plt.colorbar()
     plt.show()
 
 if __name__ == '__main__':
@@ -108,11 +111,11 @@ if __name__ == '__main__':
     output_size = env.n_camera
     inp = int(input("1. Baseline Agent 2. UCB Agent: "))
     hidden_size = 32
-    time_steps = 5
+    time_steps = 9*60
     epochs = 5
 
-    train_data, train_rewards = create_training_traces(env, 'train', inp)
-    test_data, test_rewards = create_training_traces(env, 'test', inp)
+    train_data = create_training_traces(env, 'train', inp)
+    test_data = create_training_traces(env, 'test', inp)
 
     train_data = impute_missing_values(train_data)
     test_data = impute_missing_values(test_data)
@@ -160,7 +163,7 @@ if __name__ == '__main__':
     # Testing loop
     print('Testing LSTM Agent')
     env.reset(mode='test')
-    reward_threshold = 0.2  # Adjust the threshold value as needed
+    reward_threshold = 0.1  # Adjust the threshold value as needed
     # give random scores as the initial action
     init_action = np.random.rand(env.n_camera)
     reward, state, stop = env.step(init_action)
@@ -168,8 +171,9 @@ if __name__ == '__main__':
     # Initialize the hidden and cell states for the LSTM agent
     hidden_state, cell_state = lstm_agent.init_hidden_cell_states(batch_size=1)
 
+    time_reward_lstm = {}
+
     for t in tqdm(range(env.length), initial=2):
-        state = imv(state)
         # Prepare the input state for the LSTM agent
         input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(
             0).unsqueeze(0)  # Add the batch and sequence dimensions
@@ -181,13 +185,12 @@ if __name__ == '__main__':
 
         # Perform the action in the environment
         reward, state, stop = env.step(action)
-
+        state = imv(state)
 
         # Visualize input states, LSTM agent's actions, and Baseline/UCB agent's actions for low rewards
         if reward < reward_threshold:
-            print("state:", state)
-            print("action:", action)
-            print("reward:", reward)
+            time_reward_lstm[t] = reward
+
 
         if stop:
             break
@@ -195,4 +198,26 @@ if __name__ == '__main__':
     print(f'====== RESULT ======')
     print('[total reward]:', env.get_total_reward())
 
+    # Filter out time steps with rewards above reward_threshold
+    filtered_time_reward_lstm = {k: v for k, v in time_reward_lstm.items() if
+                                 v < reward_threshold}
 
+    # Compute the difference between LSTM and UCB/Baseline agent rewards for each time step
+    differences = {}
+    for t in filtered_time_reward_lstm.keys():
+        lstm_reward = filtered_time_reward_lstm[t]
+        if t in time_reward_agent:
+            agent_reward = time_reward_agent[t]
+            differences[t] = abs(lstm_reward - agent_reward)
+
+    # Sort the differences by magnitude and take the top 10
+    sorted_differences = sorted(differences.items(), key=lambda x: x[1],
+                                reverse=True)[:10]
+
+    # Print the top 10 differences
+    print('Top 10 Time Steps with Highest Reward Differences')
+    for t, diff in sorted_differences:
+        lstm_reward = filtered_time_reward_lstm[t]
+        agent_reward = time_reward_agent[t]
+        print(
+            f'Time Step {t}: LSTM Reward={lstm_reward:.2f}, Agent Reward={agent_reward:.2f}, Difference={diff:.2f}')
