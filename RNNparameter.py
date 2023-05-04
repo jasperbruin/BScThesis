@@ -2,7 +2,7 @@ import math
 import numpy as np
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
-from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent
+from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent, SlidingWindowUCBAgent
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 import torch
@@ -46,7 +46,6 @@ def impute_missing_values(states):
 
 
 def create_training_traces(env, mode, inp):
-
     # Training
     env.reset(mode)
     if inp == 1:
@@ -62,13 +61,36 @@ def create_training_traces(env, mode, inp):
             reward, state, stop = env.step(action)
 
             states.append(state)
+
             if stop:
                 break
 
         return states
+
     elif inp == 2:
         states = []
         agent = DiscountedUCBAgent(gamma=0.999)
+        agent.initialize(env.n_camera)
+
+        for t in tqdm(range(env.length), initial=2):
+            action = agent.get_action()
+            reward, state, stop = env.step(action)
+
+            # Update the UCB Agent
+            agent.update(action, state)
+
+            states.append(state)
+
+
+            if stop:
+                break
+
+        return states
+
+
+    elif inp == 3:
+        states = []
+        agent = SlidingWindowUCBAgent(window_size=9*60)
         agent.initialize(env.n_camera)
 
         for t in tqdm(range(env.length), initial=2):
@@ -84,7 +106,6 @@ def create_training_traces(env, mode, inp):
                 break
 
         return states
-
 
 
 
@@ -142,22 +163,63 @@ if __name__ == '__main__':
     hidden_size = 32
     epochs = 5
     time_steps = [9*60, 10*60, 11*60, 12*60]
+    train_losses = []
 
+    for ts in time_steps:
+        lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
+        optimizer = Adam(lstm_agent.parameters(), lr=0.01)
+
+        trainX, trainY = get_XY(train_data, ts)
+        testX, testY = get_XY(test_data, ts)
+
+        trainX = torch.tensor(trainX, dtype=torch.float32)
+        trainY = torch.tensor(trainY, dtype=torch.float32)
+
+        # Training loop
+        print(f'Training LSTM Agent with time_steps={ts}')
+        for epoch in range(epochs):
+            for i in range(0, len(trainX), batch_size):
+                x_batch = trainX[i: i + batch_size]
+                y_batch = trainY[i: i + batch_size]
+
+                # Initialize the hidden and cell states for the LSTM agent with the correct batch size
+                hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
+                    batch_size=x_batch.size(0))
+
+                optimizer.zero_grad()
+                # Pass the hidden and cell states to the LSTM agent
+                outputs, (hidden_state, cell_state) = lstm_agent(x_batch, (
+                hidden_state, cell_state))
+                # Detach the hidden and cell states to avoid backpropagating through the entire history
+                hidden_state = hidden_state.detach()
+                cell_state = cell_state.detach()
+
+                loss = criterion(outputs, y_batch)
+                loss.backward()
+                optimizer.step()
+
+            print(f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}')
+
+        train_losses.append(loss.item())
+
+    # Find the time_step with the lowest loss
+    min_loss_idx = train_losses.index(min(train_losses))
+    best_time_step = time_steps[min_loss_idx]
+
+    # Train the model with the best time_step value
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
     optimizer = Adam(lstm_agent.parameters(), lr=0.01)
 
-    trainX, trainY = get_XY(train_data, time_steps)
-    testX, testY = get_XY(test_data, time_steps)
+    trainX, trainY = get_XY(train_data, best_time_step)
+    testX, testY = get_XY(test_data, best_time_step)
 
     trainX = torch.tensor(trainX, dtype=torch.float32)
     trainY = torch.tensor(trainY, dtype=torch.float32)
     testX = torch.tensor(testX, dtype=torch.float32)
     testY = torch.tensor(testY, dtype=torch.float32)
 
-
-
     # Training loop
-    print('Training LSTM Agent')
+    print(f'Training LSTM Agent with best time_steps={best_time_step}')
     for epoch in range(epochs):
         for i in range(0, len(trainX), batch_size):
             x_batch = trainX[i: i + batch_size]
@@ -182,15 +244,23 @@ if __name__ == '__main__':
         print(f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}')
 
 
-    # Make predictions
+    # Predictions
     train_predict = lstm_agent(trainX).detach().numpy()
     test_predict = lstm_agent(testX).detach().numpy()
 
-    # Print error
     print_error(trainY.numpy(), testY.numpy(), train_predict, test_predict)
-
-    # Plot result
     plot_result(trainY.numpy(), testY.numpy(), train_predict, test_predict)
+
+    # plot losses of different time steps
+    plt.figure(figsize=(15, 6), dpi=80)
+    plt.plot(time_steps, train_losses)
+    plt.xlabel('Time Steps')
+    plt.ylabel('Loss')
+    plt.title('Losses of different time steps')
+    plt.savefig('losses.png')
+    plt.show()
+
+
 
 
 

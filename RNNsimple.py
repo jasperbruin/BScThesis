@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
-from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent
+from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent, SlidingWindowUCBAgent
 import torch
 from torch import nn
 from torch.optim import Adam
@@ -87,6 +87,28 @@ def create_training_traces(env, mode, inp):
 
         return states
 
+
+    elif inp == 3:
+        states = []
+        agent = SlidingWindowUCBAgent(window_size=9*60)
+        agent.initialize(env.n_camera)
+
+        for t in tqdm(range(env.length), initial=2):
+            action = agent.get_action()
+            reward, state, stop = env.step(action)
+
+            # Update the UCB Agent
+            agent.update(action, state)
+
+            states.append(state)
+
+            time_reward_agent[t] = reward
+
+            if stop:
+                break
+
+        return states
+
 def plot_heatmap(data, title):
     plt.figure()
     plt.imshow(data, cmap='hot', interpolation='nearest')
@@ -109,7 +131,7 @@ if __name__ == '__main__':
 
     input_size = env.n_camera
     output_size = env.n_camera
-    inp = int(input("1. Baseline Agent 2. UCB Agent: "))
+    inp = int(input("1. Baseline Agent 2. D-UCB Agent: 3. SW-UCB Agent\n"))
     hidden_size = 32
     time_steps = 9*60
     epochs = 5
@@ -212,7 +234,7 @@ if __name__ == '__main__':
 
     # Sort the differences by magnitude and take the top 10
     sorted_differences = sorted(differences.items(), key=lambda x: x[1],
-                                reverse=True)[:10]
+                                reverse=True)[:40]
 
     # Print the top 10 differences
     print('Top 10 Time Steps with Highest Reward Differences')
