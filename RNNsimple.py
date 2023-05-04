@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
 batch_size = 32
-l_rate = 0.001
+l_rate = 0.0001
 baseline_agent = None
 agent = None
 
@@ -43,35 +43,6 @@ def imv(state):
     imputed_state = np.array([v if v >= 0 else mean_value for v in state])
     return imputed_state
 
-# def impute_missing_values(states):
-#     imputed_states = []
-#     for state in states:
-#         # Get the indices of the non-missing values
-#         indices = np.where(state >= 0)[0]
-#
-#         # Get the values of the non-missing values
-#         values = state[indices]
-#
-#         # Use nearest neighbor interpolation to fill in the missing values
-#         f = interp1d(indices, values, kind='nearest', fill_value='extrapolate')
-#         imputed_state = f(np.arange(len(state)))
-#
-#         imputed_states.append(imputed_state)
-#     return np.array(imputed_states)
-#
-#
-# def imv(state):
-#     # Get the indices of the non-missing values
-#     indices = np.where(state >= 0)[0]
-#
-#     # Get the values of the non-missing values
-#     values = state[indices]
-#
-#     # Use nearest neighbor interpolation to fill in the missing values
-#     f = interp1d(indices, values, kind='nearest', fill_value='extrapolate')
-#     imputed_state = f(np.arange(len(state)))
-#
-#     return imputed_state
 
 def create_training_traces(env, mode, inp):
     # Training
@@ -169,7 +140,7 @@ def compute_differences():
 
 
 
-def plot_all_differences(time_reward_lstm, time_reward_agent, reward_threshold):
+def plot_top_k_differences(time_reward_lstm, time_reward_agent, reward_threshold, k):
     # Filter out time steps with rewards above reward_threshold
     filtered_time_reward_lstm = {k: v for k, v in time_reward_lstm.items() if
                                  v < reward_threshold}
@@ -182,12 +153,19 @@ def plot_all_differences(time_reward_lstm, time_reward_agent, reward_threshold):
             agent_reward = time_reward_agent[t]
             differences[t] = abs(lstm_reward - agent_reward)
 
-    # Plot all the differences
+    # Sort the differences by magnitude and take the top k
+    sorted_differences = sorted(differences.items(), key=lambda x: x[1],
+                                reverse=True)[:k]
+
+    # Convert the top k differences back to a dictionary
+    top_k_differences = dict(sorted_differences)
+
+    # Plot the top k differences
     plt.figure()
-    plt.plot(list(differences.keys()), list(differences.values()), 'o', markersize=5)
+    plt.plot(list(top_k_differences.keys()), list(top_k_differences.values()), 'o', markersize=5)
     plt.xlabel('Time Step')
     plt.ylabel('Reward Difference')
-    plt.title('Reward Differences between LSTM and Agent')
+    plt.title(f'Top {k} Reward Differences between LSTM and Agent')
     plt.show()
 
 
@@ -198,7 +176,7 @@ if __name__ == '__main__':
     if inp == 2:
         criterion = nn.L1Loss()
     if inp == 3:
-        criterion = nn.SmoothL1Loss()
+        criterion = nn.HuberLoss()
 
     np.random.seed(0)
 
@@ -207,9 +185,9 @@ if __name__ == '__main__':
     input_size = env.n_camera
     output_size = env.n_camera
     inp = int(input("1. Baseline Agent 2. D-UCB Agent: 3. SW-UCB Agent\n"))
-    hidden_size = 32
-    time_steps = 11*60
-    epochs = 5
+    hidden_size = 64
+    time_steps = 10*60
+    epochs = 100
 
     train_data = create_training_traces(env, 'train', inp)
     test_data = create_training_traces(env, 'test', inp)
@@ -229,30 +207,48 @@ if __name__ == '__main__':
     testX = torch.tensor(testX, dtype=torch.float32)
     testY = torch.tensor(testY, dtype=torch.float32)
 
+    # Add these new variables before the training loop
+    patience = 5
+    best_val_loss = float('inf')
+    epochs_without_improvement = 0
+
     # Training loop
     print('Training LSTM Agent')
     for epoch in range(epochs):
+        # Training
         for i in range(0, len(trainX), batch_size):
             x_batch = trainX[i: i + batch_size]
             y_batch = trainY[i: i + batch_size]
-
-            # Initialize the hidden and cell states for the LSTM agent with the correct batch size
             hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
                 batch_size=x_batch.size(0))
-
             optimizer.zero_grad()
-            # Pass the hidden and cell states to the LSTM agent
             outputs, (hidden_state, cell_state) = lstm_agent(x_batch, (
-            hidden_state, cell_state))
-            # Detach the hidden and cell states to avoid backpropagating through the entire history
+                hidden_state, cell_state))
             hidden_state = hidden_state.detach()
             cell_state = cell_state.detach()
-
             loss = criterion(outputs, y_batch)
             loss.backward()
             optimizer.step()
 
-        print(f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}')
+        # Validation
+        val_outputs, (_, _) = lstm_agent(testX,
+                                         lstm_agent.init_hidden_cell_states(
+                                             batch_size=testX.size(0)))
+        val_loss = criterion(val_outputs, testY)
+
+        # Early stopping
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
+
+        print(
+            f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}, Validation Loss: {round(val_loss.item(), 3)}')
+
+        if epochs_without_improvement >= patience:
+            print("Early stopping")
+            break
 
     # Testing loop
     print('Testing LSTM Agent')
@@ -292,7 +288,8 @@ if __name__ == '__main__':
     print(f'====== RESULT ======')
     print('[total reward]:', env.get_total_reward())
 
-    plot_all_differences(time_reward_lstm, time_reward_agent, reward_threshold)
+    plot_top_k_differences(time_reward_lstm, time_reward_agent,
+                           reward_threshold, 50)
 
 
 

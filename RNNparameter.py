@@ -163,11 +163,12 @@ if __name__ == '__main__':
 
     hidden_size = 32
     epochs = 5
-    time_steps = [9*60, 10*60, 11*60, 12*60]
     train_losses = []
 
     best_model = None
     min_loss = float('inf')
+    # timesteps is a list from 2 to 60
+    time_steps = list(range(2, 60))
 
     for ts in time_steps:
         lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
@@ -212,11 +213,11 @@ if __name__ == '__main__':
             best_model = lstm_agent
 
     # Predictions
-    train_predict = best_model(trainX).detach().numpy()
-    test_predict = best_model(testX).detach().numpy()
+    train_predict = best_model(trainX)
+    test_predict = best_model(testX)
 
-    print_error(trainY.numpy(), testY.numpy(), train_predict, test_predict)
-    plot_result(trainY.numpy(), testY.numpy(), train_predict, test_predict)
+    # Plot the result
+    plot_result(trainY, testY, train_predict, test_predict)
 
     # plot losses of different time steps
     plt.figure(figsize=(15, 6), dpi=80)
