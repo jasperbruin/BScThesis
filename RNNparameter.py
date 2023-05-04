@@ -166,6 +166,9 @@ if __name__ == '__main__':
     time_steps = [9*60, 10*60, 11*60, 12*60]
     train_losses = []
 
+    best_model = None
+    min_loss = float('inf')
+
     for ts in time_steps:
         lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
         optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
@@ -203,51 +206,14 @@ if __name__ == '__main__':
 
         train_losses.append(loss.item())
 
-    # Find the time_step with the lowest loss
-    min_loss_idx = train_losses.index(min(train_losses))
-    best_time_step = time_steps[min_loss_idx]
-
-    # Train the model with the best time_step value
-    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
-    optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
-
-    trainX, trainY = get_XY(train_data, best_time_step)
-    testX, testY = get_XY(test_data, best_time_step)
-
-    trainX = torch.tensor(trainX, dtype=torch.float32)
-    trainY = torch.tensor(trainY, dtype=torch.float32)
-    testX = torch.tensor(testX, dtype=torch.float32)
-    testY = torch.tensor(testY, dtype=torch.float32)
-
-    # Training loop
-    print(f'Training LSTM Agent with best time_steps={best_time_step}')
-    for epoch in range(epochs):
-        for i in range(0, len(trainX), batch_size):
-            x_batch = trainX[i: i + batch_size]
-            y_batch = trainY[i: i + batch_size]
-
-            # Initialize the hidden and cell states for the LSTM agent with the correct batch size
-            hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
-                batch_size=x_batch.size(0))
-
-            optimizer.zero_grad()
-            # Pass the hidden and cell states to the LSTM agent
-            outputs, (hidden_state, cell_state) = lstm_agent(x_batch, (
-            hidden_state, cell_state))
-            # Detach the hidden and cell states to avoid backpropagating through the entire history
-            hidden_state = hidden_state.detach()
-            cell_state = cell_state.detach()
-
-            loss = criterion(outputs, y_batch)
-            loss.backward()
-            optimizer.step()
-
-        print(f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}')
-
+        # Save the model if it has the lowest loss so far
+        if loss.item() < min_loss:
+            min_loss = loss.item()
+            best_model = lstm_agent
 
     # Predictions
-    train_predict = lstm_agent(trainX).detach().numpy()
-    test_predict = lstm_agent(testX).detach().numpy()
+    train_predict = best_model(trainX).detach().numpy()
+    test_predict = best_model(testX).detach().numpy()
 
     print_error(trainY.numpy(), testY.numpy(), train_predict, test_predict)
     plot_result(trainY.numpy(), testY.numpy(), train_predict, test_predict)
@@ -260,6 +226,7 @@ if __name__ == '__main__':
     plt.title('Losses of different time steps')
     plt.savefig('losses.png')
     plt.show()
+
 
 
 

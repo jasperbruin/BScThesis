@@ -166,6 +166,31 @@ def compute_differences():
         print(
             f'Time Step {t}: LSTM Reward={lstm_reward:.2f}, Agent Reward={agent_reward:.2f}, Difference={diff:.2f}')
 
+
+
+
+def plot_all_differences(time_reward_lstm, time_reward_agent, reward_threshold):
+    # Filter out time steps with rewards above reward_threshold
+    filtered_time_reward_lstm = {k: v for k, v in time_reward_lstm.items() if
+                                 v < reward_threshold}
+
+    # Compute the difference between LSTM and UCB/Baseline agent rewards for each time step
+    differences = {}
+    for t in filtered_time_reward_lstm.keys():
+        lstm_reward = filtered_time_reward_lstm[t]
+        if t in time_reward_agent:
+            agent_reward = time_reward_agent[t]
+            differences[t] = abs(lstm_reward - agent_reward)
+
+    # Plot all the differences
+    plt.figure()
+    plt.plot(list(differences.keys()), list(differences.values()), 'o', markersize=5)
+    plt.xlabel('Time Step')
+    plt.ylabel('Reward Difference')
+    plt.title('Reward Differences between LSTM and Agent')
+    plt.show()
+
+
 if __name__ == '__main__':
     inp = int(input("1. MSE\n2. MAE \n3. Huber\n"))
     if inp == 1:
@@ -183,7 +208,7 @@ if __name__ == '__main__':
     output_size = env.n_camera
     inp = int(input("1. Baseline Agent 2. D-UCB Agent: 3. SW-UCB Agent\n"))
     hidden_size = 32
-    time_steps = 9*60
+    time_steps = 11*60
     epochs = 5
 
     train_data = create_training_traces(env, 'train', inp)
@@ -191,7 +216,6 @@ if __name__ == '__main__':
 
     train_data = impute_missing_values(train_data)
     test_data = impute_missing_values(test_data)
-    criterion = nn.SmoothL1Loss()
 
 
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
@@ -268,7 +292,8 @@ if __name__ == '__main__':
     print(f'====== RESULT ======')
     print('[total reward]:', env.get_total_reward())
 
-    compute_differences()
+    plot_all_differences(time_reward_lstm, time_reward_agent, reward_threshold)
+
 
 
 
