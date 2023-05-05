@@ -11,10 +11,10 @@ device = torch.device("mps" if torch.backends.mps.is_available() and torch.backe
 baseline_agent = None
 agent = None
 
-batch_size = 256
-l_rate = 0.0001
+batch_size = 32
+l_rate = 0.001
 hidden_size = 16
-time_steps = 8*60
+time_steps = 60
 epochs = 1000
 
 # Add these new variables before the training loop
@@ -138,19 +138,16 @@ if __name__ == '__main__':
     train_data = impute_missing_values(train_data)
     test_data = impute_missing_values(test_data)
 
-
-    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
+    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size).to(device)
     optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
 
     trainX, trainY = get_XY(train_data, time_steps)
     testX, testY = get_XY(test_data, time_steps)
 
-    trainX = torch.tensor(trainX, dtype=torch.float32)
-    trainY = torch.tensor(trainY, dtype=torch.float32)
-    testX = torch.tensor(testX, dtype=torch.float32)
-    testY = torch.tensor(testY, dtype=torch.float32)
-
-
+    trainX = torch.tensor(trainX, dtype=torch.float32).to(device)
+    trainY = torch.tensor(trainY, dtype=torch.float32).to(device)
+    testX = torch.tensor(testX, dtype=torch.float32).to(device)
+    testY = torch.tensor(testY, dtype=torch.float32).to(device)
 
     # Training loop
     print('Training LSTM Agent')
@@ -203,7 +200,7 @@ if __name__ == '__main__':
     for t in tqdm(range(env.length), initial=2):
         # Prepare the input state for the LSTM agent
         input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(
-            0).unsqueeze(0)  # Add the batch and sequence dimensions
+            0).unsqueeze(0).to(device)  # Add the batch and sequence dimensions
 
         # Get the action from the LSTM agent, passing the hidden and cell states
         action, (hidden_state, cell_state) = lstm_agent(input_state, (

@@ -12,10 +12,10 @@ baseline_agent = None
 agent = None
 
 batch_size = 32
-l_rate = 0.0001
-hidden_size = 16
-time_steps = 9*60
-epochs = 100
+l_rate = 0.001
+hidden_size = 32
+time_steps = 60
+epochs = 1000
 
 time_reward_agent = {}
 

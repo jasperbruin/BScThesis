@@ -6,6 +6,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+device = torch.device("mps" if torch.backends.mps.is_available() and torch.backends.mps.is_available() else "cpu")
+
 
 class baselineAgent:
 
@@ -173,6 +175,7 @@ class LSTM_Agent(nn.Module):
         return x, hidden_cell
 
     def init_hidden_cell_states(self, batch_size):
-        hidden_state = torch.zeros(1, batch_size, self.hidden_size)
-        cell_state = torch.zeros(1, batch_size, self.hidden_size)
+        hidden_state = torch.zeros(1, batch_size, self.hidden_size).to(device)
+        cell_state = torch.zeros(1, batch_size, self.hidden_size).to(device)
         return hidden_state, cell_state
+
