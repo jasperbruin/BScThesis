@@ -6,8 +6,6 @@ import torch
 from torch import nn
 from torch.optim import Adam
 
-device = torch.device("mps" if torch.backends.mps.is_available() and torch.backends.mps.is_built() else "cpu")
-
 baseline_agent = None
 agent = None
 
@@ -15,8 +13,8 @@ agent = None
 batch_size = 64
 l_rate = 0.001
 hidden_size = 32
-time_steps = 8 * 60
-epochs = 1500
+time_steps = 2*60
+epochs = 1000
 patience = 5  
 
 
@@ -116,12 +114,12 @@ def create_training_traces(env, mode, inp):
 
 
 if __name__ == '__main__':
-    inp = int(input("1. MSE\n2. MAE \n3. Huber\n"))
-    if inp == 1:
+    inp1 = int(input("1. MSE\n2. MAE \n3. Huber\n"))
+    if inp1 == 1:
         criterion = nn.MSELoss()
-    if inp == 2:
+    if inp1 == 2:
         criterion = nn.L1Loss()
-    if inp == 3:
+    if inp1 == 3:
         criterion = nn.HuberLoss()
 
     np.random.seed(0)
@@ -130,27 +128,25 @@ if __name__ == '__main__':
 
     input_size = env.n_camera
     output_size = env.n_camera
-    inp = int(input("1. Baseline Agent 2. D-UCB Agent: 3. SW-UCB Agent\n"))
+    inp2 = int(input("1. Baseline Agent 2. D-UCB Agent: 3. SW-UCB Agent\n"))
 
 
-    train_data = create_training_traces(env, 'train', inp)
-    test_data = create_training_traces(env, 'test', inp)
+    train_data = create_training_traces(env, 'train', inp2)
+    test_data = create_training_traces(env, 'test', inp2)
 
     train_data = impute_missing_values(train_data)
     test_data = impute_missing_values(test_data)
 
-    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size).to(device)
+    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
     optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
 
     trainX, trainY = get_XY(train_data, time_steps)
     testX, testY = get_XY(test_data, time_steps)
 
-    trainX = torch.tensor(trainX, dtype=torch.float32).to(device)
-    trainY = torch.tensor(trainY, dtype=torch.float32).to(device)
-    testX = torch.tensor(testX, dtype=torch.float32).to(device)
-    testY = torch.tensor(testY, dtype=torch.float32).to(device)
-
-    print("Used device: ", device)
+    trainX = torch.tensor(trainX, dtype=torch.float32)
+    trainY = torch.tensor(trainY, dtype=torch.float32)
+    testX = torch.tensor(testX, dtype=torch.float32)
+    testY = torch.tensor(testY, dtype=torch.float32)
 
     # Training loop
     print('Training LSTM Agent')
@@ -203,7 +199,7 @@ if __name__ == '__main__':
     for t in tqdm(range(env.length), initial=2):
         # Prepare the input state for the LSTM agent
         input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(
-            0).unsqueeze(0).to(device)  # Add the batch and sequence dimensions
+            0).unsqueeze(0)  # Add the batch and sequence dimensions
 
         # Get the action from the LSTM agent, passing the hidden and cell states
         action, (hidden_state, cell_state) = lstm_agent(input_state, (
@@ -212,20 +208,24 @@ if __name__ == '__main__':
 
         # Perform the action in the environment
         reward, state, stop = env.step(action)
-        state = imv(state)
-
+        state = impute_missing_values([state])[0]
 
         if stop:
             break
 
     print(f'====== RESULT ======')
+    if inp2 == 1:
+        print("Baseline Agent")
+    if inp2 == 2:
+        print("D-UCB Agent")
+    if inp2 == 3:
+        print("SW-UCB Agent")
     print('[total reward]:', env.get_total_reward())
-
-
-
+    print('[Hyperparameters]: lr:', l_rate, 'batch_size:', batch_size, '\nhidden_size:', hidden_size, 'time_steps:', time_steps, '\nloss function:', inp1)
 
 """
-SW-UCB, MSE, 100 epochs, 0.001 lr, 64 hidden size, 30 time steps, 0.1 reward threshold
 ====== RESULT ======
-[total reward]: 0.505
+Baseline Agent
+[total reward]: 0.501
+[Hyperparameters]:  1000 0.001 64 60 64 5 1
 """

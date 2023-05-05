@@ -53,6 +53,11 @@ for t in tqdm(range(env.length), initial=2):
     action = agent.get_action(state)
     reward, state, stop = env.step(action)
 
+
+    print("action", action)
+    print("state", state)
+    print("reward", reward)
+
     if stop:
         break
 
