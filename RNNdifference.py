@@ -5,23 +5,19 @@ from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent, SlidingWindowU
 import torch
 from torch import nn
 from torch.optim import Adam
-
-device = torch.device("mps" if torch.backends.mps.is_available() and torch.backends.mps.is_available() else "cpu")
+import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
 
 baseline_agent = None
 agent = None
 
-batch_size = 128
+batch_size = 32
 l_rate = 0.0001
 hidden_size = 16
-time_steps = 8*60
-epochs = 1000
+time_steps = 9*60
+epochs = 100
 
-# Add these new variables before the training loop
-patience = 5
-best_val_loss = float('inf')
-epochs_without_improvement = 0
-
+time_reward_agent = {}
 
 def get_train_test(states, split_percent=0.8):
     n = len(states)
@@ -69,6 +65,8 @@ def create_training_traces(env, mode, inp):
 
             states.append(state)
 
+            time_reward_agent[t] = reward
+
             if stop:
                 break
 
@@ -87,6 +85,8 @@ def create_training_traces(env, mode, inp):
             agent.update(action, state)
 
             states.append(state)
+
+            time_reward_agent[t] = reward
 
             if stop:
                 break
@@ -108,10 +108,69 @@ def create_training_traces(env, mode, inp):
 
             states.append(state)
 
+            time_reward_agent[t] = reward
+
             if stop:
                 break
 
         return states
+
+
+def compute_differences():
+    # Filter out time steps with rewards above reward_threshold
+    filtered_time_reward_lstm = {k: v for k, v in time_reward_lstm.items() if
+                                 v < reward_threshold}
+
+    # Compute the difference between LSTM and UCB/Baseline agent rewards for each time step
+    differences = {}
+    for t in filtered_time_reward_lstm.keys():
+        lstm_reward = filtered_time_reward_lstm[t]
+        if t in time_reward_agent:
+            agent_reward = time_reward_agent[t]
+            differences[t] = abs(lstm_reward - agent_reward)
+
+    # Sort the differences by magnitude and take the top 10
+    sorted_differences = sorted(differences.items(), key=lambda x: x[1],
+                                reverse=True)[:40]
+
+    # Print the top 10 differences
+    print('Top 10 Time Steps with Highest Reward Differences')
+    for t, diff in sorted_differences:
+        lstm_reward = filtered_time_reward_lstm[t]
+        agent_reward = time_reward_agent[t]
+        print(
+            f'Time Step {t}: LSTM Reward={lstm_reward:.2f}, Agent Reward={agent_reward:.2f}, Difference={diff:.2f}')
+
+
+
+
+def plot_top_k_differences(time_reward_lstm, time_reward_agent, reward_threshold, k):
+    # Filter out time steps with rewards above reward_threshold
+    filtered_time_reward_lstm = {k: v for k, v in time_reward_lstm.items() if
+                                 v < reward_threshold}
+
+    # Compute the difference between LSTM and UCB/Baseline agent rewards for each time step
+    differences = {}
+    for t in filtered_time_reward_lstm.keys():
+        lstm_reward = filtered_time_reward_lstm[t]
+        if t in time_reward_agent:
+            agent_reward = time_reward_agent[t]
+            differences[t] = abs(lstm_reward - agent_reward)
+
+    # Sort the differences by magnitude and take the top k
+    sorted_differences = sorted(differences.items(), key=lambda x: x[1],
+                                reverse=True)[:k]
+
+    # Convert the top k differences back to a dictionary
+    top_k_differences = dict(sorted_differences)
+
+    # Plot the top k differences
+    plt.figure()
+    plt.plot(list(top_k_differences.keys()), list(top_k_differences.values()), 'o', markersize=5)
+    plt.xlabel('Time Step')
+    plt.ylabel('Reward Difference')
+    plt.title(f'Top {k} Reward Differences between LSTM and Agent')
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -150,7 +209,10 @@ if __name__ == '__main__':
     testX = torch.tensor(testX, dtype=torch.float32)
     testY = torch.tensor(testY, dtype=torch.float32)
 
-
+    # Add these new variables before the training loop
+    patience = 5
+    best_val_loss = float('inf')
+    epochs_without_improvement = 0
 
     # Training loop
     print('Training LSTM Agent')
@@ -193,12 +255,15 @@ if __name__ == '__main__':
     # Testing loop
     print('Testing LSTM Agent')
     env.reset(mode='test')
+    reward_threshold = 0.1  # Adjust the threshold value as needed
     # give random scores as the initial action
     init_action = np.random.rand(env.n_camera)
     reward, state, stop = env.step(init_action)
 
     # Initialize the hidden and cell states for the LSTM agent
     hidden_state, cell_state = lstm_agent.init_hidden_cell_states(batch_size=1)
+
+    time_reward_lstm = {}
 
     for t in tqdm(range(env.length), initial=2):
         # Prepare the input state for the LSTM agent
@@ -214,6 +279,10 @@ if __name__ == '__main__':
         reward, state, stop = env.step(action)
         state = imv(state)
 
+        # Visualize input states, LSTM agent's actions, and Baseline/UCB agent's actions for low rewards
+        if reward < reward_threshold:
+            time_reward_lstm[t] = reward
+
 
         if stop:
             break
@@ -221,6 +290,8 @@ if __name__ == '__main__':
     print(f'====== RESULT ======')
     print('[total reward]:', env.get_total_reward())
 
+    plot_top_k_differences(time_reward_lstm, time_reward_agent,
+                           reward_threshold, 50)
 
 
 
