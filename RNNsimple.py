@@ -6,19 +6,20 @@ import torch
 from torch import nn
 from torch.optim import Adam
 
-device = torch.device("mps" if torch.backends.mps.is_available() and torch.backends.mps.is_available() else "cpu")
+device = torch.device("mps" if torch.backends.mps.is_available() and torch.backends.mps.is_built() else "cpu")
 
 baseline_agent = None
 agent = None
 
-batch_size = 32
+# Hyperparameters
+batch_size = 64
 l_rate = 0.001
-hidden_size = 16
-time_steps = 60
-epochs = 1000
+hidden_size = 32
+time_steps = 8 * 60
+epochs = 1500
+patience = 5  
 
-# Add these new variables before the training loop
-patience = 5
+
 best_val_loss = float('inf')
 epochs_without_improvement = 0
 
@@ -148,6 +149,8 @@ if __name__ == '__main__':
     trainY = torch.tensor(trainY, dtype=torch.float32).to(device)
     testX = torch.tensor(testX, dtype=torch.float32).to(device)
     testY = torch.tensor(testY, dtype=torch.float32).to(device)
+
+    print("Used device: ", device)
 
     # Training loop
     print('Training LSTM Agent')
