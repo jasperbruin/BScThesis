@@ -13,7 +13,7 @@ agent = None
 batch_size = 64
 l_rate = 0.001
 hidden_size = 32
-time_steps = 3*60
+time_steps = 4*60
 epochs = 1000
 patience = 5  
 
@@ -221,7 +221,8 @@ if __name__ == '__main__':
     if inp2 == 3:
         print("SW-UCB Agent")
     print('[total reward]:', env.get_total_reward())
-    print('[Hyperparameters]: ', epochs, l_rate, hidden_size, time_steps, batch_size, patience, inp1)
+    print('[Hyperparameters]')
+    print("epochs: {} lr: {} batch_size: {} \nhidden_size: {} time_steps: {} loss function: {}".format(epochs, l_rate, batch_size, hidden_size, time_steps, inp1))
 
 
 """
@@ -237,6 +238,23 @@ Baseline Agent
 ====== RESULT ======
 Baseline Agent
 [total reward]: 0.516
-[Hyperparameters]: epochs: 1000 lr: 0.001 batch_size: 64 
+[Hyperparameters]: 
+epochs: 1000 lr: 0.001 batch_size: 64 
 hidden_size: 32 time_steps: 120 loss function: 1
+
+
+====== RESULT ======
+Baseline Agent
+[total reward]: 0.501
+[Hyperparameters]
+epochs: 1000 lr: 0.001 batch_size: 64 
+hidden_size: 32 time_steps: 180 loss function: 1
+
+
+====== RESULT ======
+Baseline Agent
+[total reward]: 0.517
+[Hyperparameters]
+epochs: 1000 lr: 0.001 batch_size: 64 
+hidden_size: 32 time_steps: 240 loss function: 1
 """
