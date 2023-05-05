@@ -11,10 +11,10 @@ device = torch.device("mps" if torch.backends.mps.is_available() and torch.backe
 baseline_agent = None
 agent = None
 
-batch_size = 1056
+batch_size = 256
 l_rate = 0.0001
 hidden_size = 16
-time_steps = 9*60
+time_steps = 8*60
 epochs = 1000
 
 # Add these new variables before the training loop
