@@ -467,7 +467,7 @@ Baseline:
 Strong: 0.506 Weak: 0.317
 
 
-Run 1 SW-UCB best window size = 1 * 60:
+Run 1 SW-UCB best window size = 9 * 60:
 ====== TESTING window size ======
 [total reward]: 0.562
 Best window size: 9

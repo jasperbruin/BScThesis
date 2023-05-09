@@ -5,6 +5,8 @@ from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent, SlidingWindowU
 import torch
 from torch import nn
 from torch.optim import Adam
+import gc
+
 
 baseline_agent = None
 agent = None
@@ -13,7 +15,7 @@ agent = None
 batch_size = 64
 l_rate = 0.001
 hidden_size = 32
-time_steps = 4*60
+time_steps = 2*60
 epochs = 1000
 patience = 5  
 
@@ -91,8 +93,6 @@ def create_training_traces(env, mode, inp):
                 break
 
         return states
-
-
     elif inp == 3:
         states = []
         agent = SlidingWindowUCBAgent(window_size=9*60)
@@ -147,6 +147,9 @@ if __name__ == '__main__':
     trainY = torch.tensor(trainY, dtype=torch.float32)
     testX = torch.tensor(testX, dtype=torch.float32)
     testY = torch.tensor(testY, dtype=torch.float32)
+
+    del train_data, test_data
+    gc.collect()
 
     # Training loop
     print('Training LSTM Agent')
@@ -242,6 +245,13 @@ Baseline Agent
 epochs: 1000 lr: 0.001 batch_size: 64 
 hidden_size: 32 time_steps: 120 loss function: 1
 
+====== RESULT ======
+Baseline Agent
+[total reward]: 0.51
+[Hyperparameters]
+epochs: 1000 lr: 0.001 batch_size: 128 
+hidden_size: 32 time_steps: 120 loss function: 1
+
 
 ====== RESULT ======
 Baseline Agent
@@ -257,4 +267,30 @@ Baseline Agent
 [Hyperparameters]
 epochs: 1000 lr: 0.001 batch_size: 64 
 hidden_size: 32 time_steps: 240 loss function: 1
+
+====== RESULT ======
+Baseline Agent
+[total reward]: 0.496
+[Hyperparameters]
+epochs: 1000 lr: 0.001 batch_size: 64 
+hidden_size: 32 time_steps: 300 loss function: 1
+
+
+"""
+
+
+"""
+====== RESULT ======
+D-UCB Agent
+[total reward]: 0.504
+[Hyperparameters]
+epochs: 1000 lr: 0.001 batch_size: 64 
+hidden_size: 32 time_steps: 120 loss function: 1
+
+====== RESULT ======
+SW-UCB Agent
+[total reward]: 0.493
+[Hyperparameters]
+epochs: 1000 lr: 0.001 batch_size: 32 
+hidden_size: 32 time_steps: 120 loss function: 1
 """
