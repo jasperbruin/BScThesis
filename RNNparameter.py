@@ -1,26 +1,28 @@
-import math
 import numpy as np
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
 from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent, SlidingWindowUCBAgent
-from sklearn.metrics import mean_squared_error
-import matplotlib.pyplot as plt
 import torch
 from torch import nn
 from torch.optim import Adam
-from bayes_opt import BayesianOptimization
+import gc
 
-batch_size = 32
+
+baseline_agent = None
+agent = None
+
+# Hyperparameters
+batch_size = 64
 l_rate = 0.001
-criterion = None
+hidden_size = 32
+time_steps = 2*60
+epochs = 1000
+patience = 5
 
-inp = int(input("1. MSE\n2. MAE \n3. Huber\n"))
-if inp == 1:
-    criterion = nn.MSELoss()
-if inp == 2:
-    criterion = nn.L1Loss()
-if inp == 3:
-    criterion = nn.SmoothL1Loss()
+
+best_val_loss = float('inf')
+epochs_without_improvement = 0
+
 
 def get_train_test(states, split_percent=0.8):
     n = len(states)
@@ -44,6 +46,11 @@ def impute_missing_values(states):
         imputed_state = np.array([v if v >= 0 else mean_values for v in state])
         imputed_states.append(imputed_state)
     return np.array(imputed_states)
+
+def imv(state):
+    mean_value = np.mean([v for v in state if v >= 0])
+    imputed_state = np.array([v if v >= 0 else mean_value for v in state])
+    return imputed_state
 
 
 def create_training_traces(env, mode, inp):
@@ -82,13 +89,10 @@ def create_training_traces(env, mode, inp):
 
             states.append(state)
 
-
             if stop:
                 break
 
         return states
-
-
     elif inp == 3:
         states = []
         agent = SlidingWindowUCBAgent(window_size=9*60)
@@ -109,127 +113,116 @@ def create_training_traces(env, mode, inp):
         return states
 
 
-
-
-# Plot the result
-def plot_result(trainY, testY, train_predict, test_predict):
-    actual = np.append(trainY, testY)
-    predictions = np.append(train_predict, test_predict)
-    rows = len(actual)
-    plt.figure(figsize=(15, 6), dpi=80)
-    plt.plot(range(rows), actual)
-    plt.plot(range(rows), predictions)
-    plt.axvline(x=len(trainY), color='r')
-    plt.legend(['Actual', 'Predictions'])
-    plt.xlabel('Observation number after given time steps')
-    plt.ylabel('Sunspots scaled')
-    plt.title('Actual and Predicted Values. The Red Line Separates The Training And Test Examples')
-    plt.show()
-
-def print_error(trainY, testY, train_predict, test_predict):
-    # Error of predictions
-    train_rmse = math.sqrt(mean_squared_error(trainY, train_predict))
-    test_rmse = math.sqrt(mean_squared_error(testY, test_predict))
-    # Print RMSE
-    print('Train RMSE: %.3f RMSE' % (train_rmse))
-    print('Test RMSE: %.3f RMSE' % (test_rmse))
-
-def plot_rewards_comparison(ucb_rewards, lstm_rewards):
-    plt.figure(figsize=(15, 6), dpi=80)
-    plt.plot(ucb_rewards, label='UCB Rewards')
-    plt.plot(lstm_rewards, label='LSTM Rewards')
-    plt.legend(['UCB Rewards', 'LSTM Rewards'])
-    plt.xlabel('Observation number after given time steps')
-    plt.ylabel('Rewards')
-    plt.title('Comparison of UCB and LSTM Rewards')
-    plt.show()
-
-
-
 if __name__ == '__main__':
+    inp1 = int(input("1. MSE\n2. MAE \n3. Huber\n"))
+    if inp1 == 1:
+        criterion = nn.MSELoss()
+    if inp1 == 2:
+        criterion = nn.L1Loss()
+    if inp1 == 3:
+        criterion = nn.HuberLoss()
+
     np.random.seed(0)
 
     env = ROFARS_v1()
 
     input_size = env.n_camera
     output_size = env.n_camera
-    inp = int(input("1. Baseline Agent 2. UCB Agent: "))
+    inp2 = int(input("1. Baseline Agent 2. D-UCB Agent: 3. SW-UCB Agent\n"))
 
-    train_data = create_training_traces(env, 'train', inp)
-    test_data = create_training_traces(env, 'test', inp)
+
+    train_data = create_training_traces(env, 'train', inp2)
+    test_data = create_training_traces(env, 'test', inp2)
 
     train_data = impute_missing_values(train_data)
     test_data = impute_missing_values(test_data)
 
-    hidden_size = 32
-    epochs = 5
-    train_losses = []
+    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
+    optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
 
-    best_model = None
-    min_loss = float('inf')
-    # timesteps is a list from 2 to 60
-    time_steps = list(range(2, 60))
+    trainX, trainY = get_XY(train_data, time_steps)
+    testX, testY = get_XY(test_data, time_steps)
 
-    for ts in time_steps:
-        lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
-        optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
+    trainX = torch.tensor(trainX, dtype=torch.float32)
+    trainY = torch.tensor(trainY, dtype=torch.float32)
+    testX = torch.tensor(testX, dtype=torch.float32)
+    testY = torch.tensor(testY, dtype=torch.float32)
 
-        trainX, trainY = get_XY(train_data, ts)
-        testX, testY = get_XY(test_data, ts)
+    del train_data, test_data
+    gc.collect()
 
-        trainX = torch.tensor(trainX, dtype=torch.float32)
-        trainY = torch.tensor(trainY, dtype=torch.float32)
-
-        # Training loop
-        print(f'Training LSTM Agent with time_steps={ts}')
-        for epoch in range(epochs):
-            for i in range(0, len(trainX), batch_size):
-                x_batch = trainX[i: i + batch_size]
-                y_batch = trainY[i: i + batch_size]
-
-                # Initialize the hidden and cell states for the LSTM agent with the correct batch size
-                hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
-                    batch_size=x_batch.size(0))
-
-                optimizer.zero_grad()
-                # Pass the hidden and cell states to the LSTM agent
-                outputs, (hidden_state, cell_state) = lstm_agent(x_batch, (
+    # Training loop
+    print('Training LSTM Agent')
+    for epoch in range(epochs):
+        # Training
+        for i in range(0, len(trainX), batch_size):
+            x_batch = trainX[i: i + batch_size]
+            y_batch = trainY[i: i + batch_size]
+            hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
+                batch_size=x_batch.size(0))
+            optimizer.zero_grad()
+            outputs, (hidden_state, cell_state) = lstm_agent(x_batch, (
                 hidden_state, cell_state))
-                # Detach the hidden and cell states to avoid backpropagating through the entire history
-                hidden_state = hidden_state.detach()
-                cell_state = cell_state.detach()
+            hidden_state = hidden_state.detach()
+            cell_state = cell_state.detach()
+            loss = criterion(outputs, y_batch)
+            loss.backward()
+            optimizer.step()
 
-                loss = criterion(outputs, y_batch)
-                loss.backward()
-                optimizer.step()
+        # Validation
+        val_outputs, (_, _) = lstm_agent(testX,
+                                         lstm_agent.init_hidden_cell_states(
+                                             batch_size=testX.size(0)))
+        val_loss = criterion(val_outputs, testY)
 
-            print(f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}')
+        # Early stopping
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            epochs_without_improvement = 0
+        else:
+            epochs_without_improvement += 1
 
-        train_losses.append(loss.item())
+        print(
+            f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}, Validation Loss: {round(val_loss.item(), 3)}')
 
-        # Save the model if it has the lowest loss so far
-        if loss.item() < min_loss:
-            min_loss = loss.item()
-            best_model = lstm_agent
+        if epochs_without_improvement >= patience:
+            print("Early stopping")
+            break
 
-    # Predictions
-    train_predict = best_model(trainX)
-    test_predict = best_model(testX)
+    # Testing loop
+    print('Testing LSTM Agent')
+    env.reset(mode='test')
+    # give random scores as the initial action
+    init_action = np.random.rand(env.n_camera)
+    reward, state, stop = env.step(init_action)
 
-    # Plot the result
-    plot_result(trainY, testY, train_predict, test_predict)
+    # Initialize the hidden and cell states for the LSTM agent
+    hidden_state, cell_state = lstm_agent.init_hidden_cell_states(batch_size=1)
 
-    # plot losses of different time steps
-    plt.figure(figsize=(15, 6), dpi=80)
-    plt.plot(time_steps, train_losses)
-    plt.xlabel('Time Steps')
-    plt.ylabel('Loss')
-    plt.title('Losses of different time steps')
-    plt.savefig('losses.png')
-    plt.show()
+    for t in tqdm(range(env.length), initial=2):
+        # Prepare the input state for the LSTM agent
+        input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(
+            0).unsqueeze(0)  # Add the batch and sequence dimensions
 
+        # Get the action from the LSTM agent, passing the hidden and cell states
+        action, (hidden_state, cell_state) = lstm_agent(input_state, (
+        hidden_state, cell_state))
+        action = action.squeeze().detach().numpy()
 
+        # Perform the action in the environment
+        reward, state, stop = env.step(action)
+        state = impute_missing_values([state])[0]
 
+        if stop:
+            break
 
-
-
+    print(f'====== RESULT ======')
+    if inp2 == 1:
+        print("Baseline Agent")
+    if inp2 == 2:
+        print("D-UCB Agent")
+    if inp2 == 3:
+        print("SW-UCB Agent")
+    print('[total reward]:', env.get_total_reward())
+    print('[Hyperparameters]')
+    print("epochs: {} lr: {} batch_size: {} \nhidden_size: {} time_steps: {} loss function: {}".format(epochs, l_rate, batch_size, hidden_size, time_steps, inp1))

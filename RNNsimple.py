@@ -5,8 +5,18 @@ from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent, SlidingWindowU
 import torch
 from torch import nn
 from torch.optim import Adam
-import gc
+import csv
 
+# Function to set the device to CUDA if available
+def get_device():
+    if torch.cuda.is_available():
+        device = 'cuda:0'
+    else:
+        device = 'cpu'
+    return device
+
+# Setting the device
+device = get_device()
 
 baseline_agent = None
 agent = None
@@ -15,13 +25,17 @@ agent = None
 batch_size = 64
 l_rate = 0.001
 hidden_size = 32
-time_steps = 2*60
-epochs = 1000
-patience = 5  
+time_steps = [2, 3, 4, 5]
+#time_steps = [9*60, 10*60, 11*60, 12*60, 13*60, 14*60, 15*60]
+epochs = 5000
+patience = 5
 
 
 best_val_loss = float('inf')
 epochs_without_improvement = 0
+result = []
+# ['Agent', 'Total Reward', 'Epochs', 'Learning Rate', 'Batch Size', 'Hidden Size', 'Time Steps', 'Loss Function']
+
 
 
 def get_train_test(states, split_percent=0.8):
@@ -137,95 +151,108 @@ if __name__ == '__main__':
     train_data = impute_missing_values(train_data)
     test_data = impute_missing_values(test_data)
 
-    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size)
+    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size).to(device)
     optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
 
-    trainX, trainY = get_XY(train_data, time_steps)
-    testX, testY = get_XY(test_data, time_steps)
+    for ts in time_steps:
+        trainX, trainY = get_XY(train_data, ts)
+        testX, testY = get_XY(test_data, ts)
 
-    trainX = torch.tensor(trainX, dtype=torch.float32)
-    trainY = torch.tensor(trainY, dtype=torch.float32)
-    testX = torch.tensor(testX, dtype=torch.float32)
-    testY = torch.tensor(testY, dtype=torch.float32)
+        trainX = torch.tensor(trainX, dtype=torch.float32).to(device)
+        trainY = torch.tensor(trainY, dtype=torch.float32).to(device)
+        testX = torch.tensor(testX, dtype=torch.float32).to(device)
+        testY = torch.tensor(testY, dtype=torch.float32).to(device)
 
-    del train_data, test_data
-    gc.collect()
 
-    # Training loop
-    print('Training LSTM Agent')
-    for epoch in range(epochs):
-        # Training
-        for i in range(0, len(trainX), batch_size):
-            x_batch = trainX[i: i + batch_size]
-            y_batch = trainY[i: i + batch_size]
-            hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
-                batch_size=x_batch.size(0))
-            optimizer.zero_grad()
-            outputs, (hidden_state, cell_state) = lstm_agent(x_batch, (
-                hidden_state, cell_state))
-            hidden_state = hidden_state.detach()
-            cell_state = cell_state.detach()
-            loss = criterion(outputs, y_batch)
-            loss.backward()
-            optimizer.step()
+        # Training loop
+        print('Training LSTM Agent')
+        for epoch in range(epochs):
+            # Training
+            for i in range(0, len(trainX), batch_size):
+                x_batch = trainX[i: i + batch_size]
+                y_batch = trainY[i: i + batch_size]
+                hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
+                    batch_size=x_batch.size(0))
+                optimizer.zero_grad()
+                outputs, (hidden_state, cell_state) = lstm_agent(x_batch, (
+                    hidden_state, cell_state))
+                hidden_state = hidden_state.detach()
+                cell_state = cell_state.detach()
+                loss = criterion(outputs, y_batch)
+                loss.backward()
+                optimizer.step()
 
-        # Validation
-        val_outputs, (_, _) = lstm_agent(testX,
-                                         lstm_agent.init_hidden_cell_states(
-                                             batch_size=testX.size(0)))
-        val_loss = criterion(val_outputs, testY)
+            # Validation
+            val_outputs, (_, _) = lstm_agent(testX,
+                                             lstm_agent.init_hidden_cell_states(
+                                                 batch_size=testX.size(0)))
+            val_loss = criterion(val_outputs, testY)
 
-        # Early stopping
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            epochs_without_improvement = 0
-        else:
-            epochs_without_improvement += 1
+            # Early stopping
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                epochs_without_improvement = 0
+            else:
+                epochs_without_improvement += 1
 
-        print(
-            f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}, Validation Loss: {round(val_loss.item(), 3)}')
+            print(
+                f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}, Validation Loss: {round(val_loss.item(), 3)}')
 
-        if epochs_without_improvement >= patience:
-            print("Early stopping")
-            break
+            if epochs_without_improvement >= patience:
+                print("Early stopping")
+                break
 
-    # Testing loop
-    print('Testing LSTM Agent')
-    env.reset(mode='test')
-    # give random scores as the initial action
-    init_action = np.random.rand(env.n_camera)
-    reward, state, stop = env.step(init_action)
+        # Testing loop
+        print('Testing LSTM Agent')
+        env.reset(mode='test')
+        # give random scores as the initial action
+        init_action = np.random.rand(env.n_camera)
+        reward, state, stop = env.step(init_action)
 
-    # Initialize the hidden and cell states for the LSTM agent
-    hidden_state, cell_state = lstm_agent.init_hidden_cell_states(batch_size=1)
+        # Initialize the hidden and cell states for the LSTM agent
+        hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
+            batch_size=1)
+        hidden_state = hidden_state.to(device)
+        cell_state = cell_state.to(device)
 
-    for t in tqdm(range(env.length), initial=2):
-        # Prepare the input state for the LSTM agent
-        input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(
-            0).unsqueeze(0)  # Add the batch and sequence dimensions
+        for t in tqdm(range(env.length), initial=2):
+            # Prepare the input state for the LSTM agent
+            input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(
+                0).unsqueeze(0).to(
+                device)  # Add the batch and sequence dimensions
 
-        # Get the action from the LSTM agent, passing the hidden and cell states
-        action, (hidden_state, cell_state) = lstm_agent(input_state, (
-        hidden_state, cell_state))
-        action = action.squeeze().detach().numpy()
+            # Get the action from the LSTM agent, passing the hidden and cell states
+            action, (hidden_state, cell_state) = lstm_agent(input_state, (
+            hidden_state, cell_state))
+            action = action.squeeze().detach().numpy()
 
-        # Perform the action in the environment
-        reward, state, stop = env.step(action)
-        state = impute_missing_values([state])[0]
+            # Perform the action in the environment
+            reward, state, stop = env.step(action)
+            state = impute_missing_values([state])[0]
 
-        if stop:
-            break
+            if stop:
+                break
 
-    print(f'====== RESULT ======')
-    if inp2 == 1:
-        print("Baseline Agent")
-    if inp2 == 2:
-        print("D-UCB Agent")
-    if inp2 == 3:
-        print("SW-UCB Agent")
-    print('[total reward]:', env.get_total_reward())
-    print('[Hyperparameters]')
-    print("epochs: {} lr: {} batch_size: {} \nhidden_size: {} time_steps: {} loss function: {}".format(epochs, l_rate, batch_size, hidden_size, time_steps, inp1))
+        print(f'====== RESULT ======')
+        if inp2 == 1:
+            print("Baseline Agent")
+        if inp2 == 2:
+            print("D-UCB Agent")
+        if inp2 == 3:
+            print("SW-UCB Agent")
+        print('[total reward]:', env.get_total_reward())
+        print('[Hyperparameters]')
+        print("epochs: {} lr: {} batch_size: {} \nhidden_size: {} time_steps: {} loss function: {}".format(epochs, l_rate, batch_size, hidden_size, ts, inp1))
+
+
+        total_reward = env.get_total_reward()
+
+        result.append([inp2, total_reward, epochs, l_rate, batch_size, hidden_size, ts, inp1])
+
+        with open('results.csv', mode='a', newline='') as file:
+            writer = csv.writer(file)
+            for row in result:
+                writer.writerow(row)
 
 
 """
@@ -293,4 +320,54 @@ SW-UCB Agent
 [Hyperparameters]
 epochs: 1000 lr: 0.001 batch_size: 32 
 hidden_size: 32 time_steps: 120 loss function: 1
+"""
+
+"""
+====== TESTING======
+[total reward]: 0.559
+Best gamma: 0.999
+
+Difference Strong Baseline = Run 3 - Baseline = 0.559 - 0.506 = 0.053
+Percentage growth = (Difference / Baseline) x 100 = 0.053 / 0.506 x 100 = 10.5%
+
+Difference Weak Baseline = Run 3 - Baseline = 0.559 - 0.317 = 0.242
+Percentage growth = (Difference / Baseline) x 100 = 0.242 / 0.317 x 100 = 76.2%
+
+
+====== RESULT ======
+Baseline Agent
+[total reward]: 0.517
+
+Difference Strong Baseline = Run 3 - Baseline = 0.517 - 0.506 = 0.011
+Percentage growth = (Difference / Baseline) x 100 = 0.011 / 0.506 x 100 = 2.2%
+
+Difference Weak Baseline = Run 3 - Baseline = 0.517 - 0.317 = 0.2
+Percentage growth = (Difference / Baseline) x 100 = 0.2 / 0.317 x 100 = 63.1%
+
+
+====== RESULT ======
+D-UCB Agent
+[total reward]: 0.498
+[Hyperparameters]
+epochs: 1000 lr: 0.001 batch_size: 64 
+hidden_size: 32 time_steps: 240 loss function: 1
+
+Difference Strong Baseline = Run 3 - Baseline = 0.498 - 0.506 = -0.008
+Percentage growth = (Difference / Baseline) x 100 = -0.008 / 0.506 x 100 = -1.6%
+
+Difference Weak Baseline = Run 3 - Baseline = 0.498 - 0.317 = 0.181
+Percentage growth = (Difference / Baseline) x 100 = 0.181 / 0.317 x 100 = 57.1%
+
+
+
+====== RESULT ======
+SW-UCB Agent
+[total reward]: 0.499
+[Hyperparameters]
+epochs: 1000 lr: 0.001 batch_size: 64 
+hidden_size: 32 time_steps: 240 loss function: 1
+
+Difference Strong Baseline = Run 3 - Baseline = 0.499 - 0.506 = -0.007
+
+
 """
