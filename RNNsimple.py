@@ -22,11 +22,11 @@ baseline_agent = None
 agent = None
 
 # Hyperparameters
-batch_size = 64
+batch_size = 8
 l_rate = 0.001
-hidden_size = 32
-time_steps = [2, 3, 4, 5]
-#time_steps = [9*60, 10*60, 11*60, 12*60, 13*60, 14*60, 15*60]
+hidden_size = 16
+time_steps = [9*60]
+#time_steps = [9*60]
 epochs = 5000
 patience = 5
 
