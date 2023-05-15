@@ -18,22 +18,23 @@ def get_device():
 # Setting the device
 device = get_device()
 
+print("device: ", device)
+
 baseline_agent = None
 agent = None
 
 # Hyperparameters
-batch_size = 8
 l_rate = 0.001
 hidden_size = 16
-time_steps = [9*60]
-#time_steps = [9*60]
+time_steps = [60]
 epochs = 5000
 patience = 5
-
 
 best_val_loss = float('inf')
 epochs_without_improvement = 0
 result = []
+
+
 # ['Agent', 'Total Reward', 'Epochs', 'Learning Rate', 'Batch Size', 'Hidden Size', 'Time Steps', 'Loss Function']
 
 
@@ -163,24 +164,17 @@ if __name__ == '__main__':
         testX = torch.tensor(testX, dtype=torch.float32).to(device)
         testY = torch.tensor(testY, dtype=torch.float32).to(device)
 
-
         # Training loop
         print('Training LSTM Agent')
         for epoch in range(epochs):
-            # Training
-            for i in range(0, len(trainX), batch_size):
-                x_batch = trainX[i: i + batch_size]
-                y_batch = trainY[i: i + batch_size]
-                hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
-                    batch_size=x_batch.size(0))
-                optimizer.zero_grad()
-                outputs, (hidden_state, cell_state) = lstm_agent(x_batch, (
-                    hidden_state, cell_state))
-                hidden_state = hidden_state.detach()
-                cell_state = cell_state.detach()
-                loss = criterion(outputs, y_batch)
-                loss.backward()
-                optimizer.step()
+            hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
+                batch_size=trainX.size(0))
+            optimizer.zero_grad()
+            outputs, (hidden_state, cell_state) = lstm_agent(trainX, (
+            hidden_state, cell_state))
+            loss = criterion(outputs, trainY)
+            loss.backward()
+            optimizer.step()
 
             # Validation
             val_outputs, (_, _) = lstm_agent(testX,

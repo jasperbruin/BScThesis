@@ -6,8 +6,15 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+def get_device():
+    if torch.cuda.is_available():
+        device = 'cuda:0'
+    else:
+        device = 'cpu'
+    return device
 
+# Setting the device
+device = get_device()
 
 class baselineAgent:
 
