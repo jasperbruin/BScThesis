@@ -26,7 +26,7 @@ agent = None
 # Hyperparameters
 l_rate = 0.001
 hidden_size = 16
-time_steps = [3*60]
+time_steps = [9*60]
 epochs = 5000
 patience = 3
 
@@ -251,7 +251,7 @@ if __name__ == '__main__':
 ====== RESULT ======
 Used Historical traces: Baseline Agent
 [total reward]: 0.507
-[Hyperparameters] 5000 0.001 16 60 1
+[Hyperparameters] epochs: 5000 lr: 0.001 hidden_size: 16 timesteps: 60, loss:1
 
 
 ====== RESULT ======
