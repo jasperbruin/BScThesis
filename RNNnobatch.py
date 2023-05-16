@@ -27,7 +27,7 @@ agent = None
 l_rate = 0.001
 hidden_size = 16
 time_steps = [60]
-epochs = 5000
+epochs = 10000
 patience = 5
 
 best_val_loss = float('inf')
@@ -236,12 +236,12 @@ if __name__ == '__main__':
             print("SW-UCB Agent")
         print('[total reward]:', env.get_total_reward())
         print('[Hyperparameters]')
-        print("epochs: {} lr: {} batch_size: {} \nhidden_size: {} time_steps: {} loss function: {}".format(epochs, l_rate, batch_size, hidden_size, ts, inp1))
+        print("epochs: {} lr: {} batch_size: {} \nhidden_size: {} time_steps: {} loss function: {}".format(epochs, l_rate, hidden_size, ts, inp1))
 
 
         total_reward = env.get_total_reward()
 
-        result.append([inp2, total_reward, epochs, l_rate, batch_size, hidden_size, ts, inp1])
+        result.append([inp2, total_reward, epochs, l_rate, hidden_size, ts, inp1])
 
         with open('results.csv', mode='a', newline='') as file:
             writer = csv.writer(file)

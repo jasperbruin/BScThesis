@@ -5,6 +5,7 @@ from collections import deque
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.utils.checkpoint import checkpoint
 
 def get_device():
     if torch.cuda.is_available():
@@ -176,7 +177,7 @@ class LSTM_Agent(nn.Module):
         self.hidden_size = hidden_size
 
     def forward(self, state, hidden_cell):
-        x, hidden_cell = self.lstm(state, hidden_cell)
+        x, hidden_cell = checkpoint(self.lstm, state, hidden_cell)
         x = x[:, -1, :]
         x = self.dense(x)
         return x, hidden_cell
