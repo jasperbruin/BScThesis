@@ -26,9 +26,9 @@ agent = None
 # Hyperparameters
 l_rate = 0.001
 hidden_size = 16
-time_steps = [60]
+time_steps = [3*60]
 epochs = 5000
-patience = 5
+patience = 3
 
 best_val_loss = float('inf')
 epochs_without_improvement = 0
@@ -36,8 +36,6 @@ result = []
 
 
 # ['Agent', 'Total Reward', 'Epochs', 'Learning Rate', 'Hidden Size', 'Time Steps', 'Loss Function']
-
-
 
 def get_train_test(states, split_percent=0.8):
     n = len(states)
@@ -218,7 +216,8 @@ if __name__ == '__main__':
             # Get the action from the LSTM agent, passing the hidden and cell states
             action, (hidden_state, cell_state) = lstm_agent(input_state, (
             hidden_state, cell_state))
-            action = action.squeeze().detach().numpy()
+            action = action.squeeze().detach().cpu().numpy()
+
 
             # Perform the action in the environment
             reward, state, stop = env.step(action)
@@ -229,14 +228,14 @@ if __name__ == '__main__':
 
         print(f'====== RESULT ======')
         if inp2 == 1:
-            print("Baseline Agent")
+            print("Used Historical traces: Baseline Agent")
         if inp2 == 2:
-            print("D-UCB Agent")
+            print("Used Historical traces: D-UCB Agent")
         if inp2 == 3:
-            print("SW-UCB Agent")
+            print("Used Historical traces: SW-UCB Agent")
         print('[total reward]:', env.get_total_reward())
         print('[Hyperparameters]')
-        print("epochs: {} lr: {} batch_size: {} \nhidden_size: {} time_steps: {} loss function: {}".format(epochs, l_rate, hidden_size, ts, inp1))
+        print("epochs: {} lr: {} \nhidden_size: {} time_steps: {} loss function: {}".format(epochs, l_rate, hidden_size, ts, inp1))
 
 
         total_reward = env.get_total_reward()
@@ -247,3 +246,18 @@ if __name__ == '__main__':
             writer = csv.writer(file)
             for row in result:
                 writer.writerow(row)
+
+"""
+====== RESULT ======
+Used Historical traces: Baseline Agent
+[total reward]: 0.507
+[Hyperparameters] 5000 0.001 16 60 1
+
+
+====== RESULT ======
+Used Historical traces: Baseline Agent
+[total reward]: 0.502
+[Hyperparameters]
+epochs: 5000 lr: 0.001 
+hidden_size: 16 time_steps: 120 loss function: 1
+"""
