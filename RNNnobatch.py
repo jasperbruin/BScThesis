@@ -250,26 +250,23 @@ if __name__ == '__main__':
 """
 ====== RESULT ======
 Used Historical traces: Baseline Agent
-[total reward]: 0.507
-[Hyperparameters] epochs: 5000 lr: 0.001 hidden_size: 16 timesteps: 60, loss:1
+[total reward]: 0.534
+[Hyperparameters]
+epochs: 5000 lr: 0.001 
+hidden_size: 16 time_steps: 60 loss function: 1
 
 ====== RESULT ======
-Used Historical traces: Baseline Agent
+Used Historical traces: D-UCB Agent
+[total reward]: 0.509
+[Hyperparameters]
+epochs: 5000 lr: 0.001 
+hidden_size: 16 time_steps: 60 loss function: 1
+
+====== RESULT ======
+Used Historical traces: SW-UCB Agent
 [total reward]: 0.502
 [Hyperparameters]
 epochs: 5000 lr: 0.001 
-hidden_size: 16 time_steps: 120 loss function: 1
-
-====== RESULT ======
-Used Historical traces: Baseline Agent
-[total reward]: 0.514
-[Hyperparameters]
-epochs: 5000 lr: 0.001 
-hidden_size: 16 time_steps: 180 loss function: 1
-
-
-
-Adjusted lr to 0.005 as time_steps increased to 9*60
-====== RESULT ======
+hidden_size: 16 time_steps: 60 loss function: 1
 
 """
