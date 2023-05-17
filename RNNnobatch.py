@@ -8,15 +8,17 @@ from torch.optim import Adam
 import csv
 
 # Function to set the device to CUDA if available
-def get_device():
-    if torch.cuda.is_available():
-        device = 'cuda:0'
+# Check that MPS is available
+if not torch.backends.mps.is_available():
+    if not torch.backends.mps.is_built():
+        print("MPS not available because the current PyTorch install was not "
+              "built with MPS enabled.")
     else:
-        device = 'cpu'
-    return device
+        print("MPS not available because the current MacOS version is not 12.3+ "
+              "and/or you do not have an MPS-enabled device on this machine.")
 
-# Setting the device
-device = get_device()
+else:
+    device = torch.device("mps")
 
 print("device: ", device)
 
@@ -26,7 +28,7 @@ agent = None
 # Hyperparameters
 # 0.005
 l_rate = 0.005
-hidden_size = 16
+hidden_size = 1
 time_steps = [9*60]
 epochs = 5000
 patience = 3
