@@ -24,7 +24,8 @@ baseline_agent = None
 agent = None
 
 # Hyperparameters
-l_rate = 0.001
+# 0.005
+l_rate = 0.005
 hidden_size = 16
 time_steps = [9*60]
 epochs = 5000
@@ -33,9 +34,6 @@ patience = 3
 best_val_loss = float('inf')
 epochs_without_improvement = 0
 result = []
-
-
-# ['Agent', 'Total Reward', 'Epochs', 'Learning Rate', 'Hidden Size', 'Time Steps', 'Loss Function']
 
 def get_train_test(states, split_percent=0.8):
     n = len(states)
@@ -253,11 +251,23 @@ Used Historical traces: Baseline Agent
 [total reward]: 0.507
 [Hyperparameters] epochs: 5000 lr: 0.001 hidden_size: 16 timesteps: 60, loss:1
 
-
 ====== RESULT ======
 Used Historical traces: Baseline Agent
 [total reward]: 0.502
 [Hyperparameters]
 epochs: 5000 lr: 0.001 
 hidden_size: 16 time_steps: 120 loss function: 1
+
+====== RESULT ======
+Used Historical traces: Baseline Agent
+[total reward]: 0.514
+[Hyperparameters]
+epochs: 5000 lr: 0.001 
+hidden_size: 16 time_steps: 180 loss function: 1
+
+
+
+Adjusted lr to 0.005 as time_steps increased to 9*60
+====== RESULT ======
+
 """

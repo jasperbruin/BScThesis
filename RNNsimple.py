@@ -12,12 +12,13 @@ baseline_agent = None
 agent = None
 
 # Hyperparameters
-batch_size = 4
-l_rate = 0.001
-hidden_size = 32
-time_steps = 2*60
-epochs = 1000
-patience = 5
+batch_size = 2
+l_rate = 0.005
+#l_rate = 0.01
+hidden_size = 16
+time_steps = 9*60
+epochs = 5000
+patience = 3
 
 
 best_val_loss = float('inf')
