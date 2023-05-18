@@ -1,7 +1,9 @@
+import statistics
+import time
 import numpy as np
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
-from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent, SlidingWindowUCBAgent
+from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent, SlidingWindowUCBAgent, UCBAgent
 import torch
 from torch import nn
 from torch.optim import Adam
@@ -25,11 +27,10 @@ else:
 baseline_agent = None
 agent = None
 
-# Hyperparameters
-# 0.005
+
 l_rate = 0.001
-hidden_size = 10
-time_steps = [3*60]
+hidden_size = 32
+time_steps = [2*60]
 epochs = 5000
 patience = 5
 
@@ -124,6 +125,24 @@ def create_training_traces(env, mode, inp):
                 break
 
         return states
+    elif inp == 4:
+        states = []
+        agent = UCBAgent()
+        agent.initialize(env.n_camera)
+
+        for t in tqdm(range(env.length), initial=2):
+            action = agent.get_action()
+            reward, state, stop = env.step(action)
+
+            # Update the UCB Agent
+            agent.update(action, state)
+
+            states.append(state)
+
+            if stop:
+                break
+
+        return states
 
 
 if __name__ == '__main__':
@@ -141,7 +160,7 @@ if __name__ == '__main__':
 
     input_size = env.n_camera
     output_size = env.n_camera
-    inp2 = int(input("1. Baseline Agent 2. D-UCB Agent: 3. SW-UCB Agent\n"))
+    inp2 = int(input("1. Baseline Agent 2. D-UCB Agent: 3. SW-UCB Agent 4. UCB-1 Agent\n"))
 
 
     train_data = create_training_traces(env, 'train', inp2)
@@ -167,6 +186,9 @@ if __name__ == '__main__':
         for epoch in range(epochs):
             hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
                 batch_size=trainX.size(0))
+            hidden_state = hidden_state.to(device)
+            cell_state = cell_state.to(device)
+
             optimizer.zero_grad()
             outputs, (hidden_state, cell_state) = lstm_agent(trainX, (
             hidden_state, cell_state))
@@ -178,6 +200,8 @@ if __name__ == '__main__':
             val_outputs, (_, _) = lstm_agent(testX,
                                              lstm_agent.init_hidden_cell_states(
                                                  batch_size=testX.size(0)))
+            hidden_state = hidden_state.to(device)
+            cell_state = cell_state.to(device)
             val_loss = criterion(val_outputs, testY)
 
             # Early stopping
@@ -194,7 +218,6 @@ if __name__ == '__main__':
                 print("Early stopping")
                 break
 
-        # Testing loop
         print('Testing LSTM Agent')
         env.reset(mode='test')
         # give random scores as the initial action
@@ -207,17 +230,27 @@ if __name__ == '__main__':
         hidden_state = hidden_state.to(device)
         cell_state = cell_state.to(device)
 
+        inference_times = []
         for t in tqdm(range(env.length), initial=2):
             # Prepare the input state for the LSTM agent
             input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(
                 0).unsqueeze(0).to(
                 device)  # Add the batch and sequence dimensions
 
+            # Measure inference time
+            start_time = time.time()
+
             # Get the action from the LSTM agent, passing the hidden and cell states
             action, (hidden_state, cell_state) = lstm_agent(input_state, (
             hidden_state, cell_state))
-            action = action.squeeze().detach().cpu().numpy()
 
+            end_time = time.time()
+
+            # Calculate and append inference time
+            inference_time = (end_time - start_time) * 1000  # convert to ms
+            inference_times.append(inference_time)
+
+            action = action.squeeze().detach().cpu().numpy()
 
             # Perform the action in the environment
             reward, state, stop = env.step(action)
@@ -226,6 +259,8 @@ if __name__ == '__main__':
             if stop:
                 break
 
+        average_inference_time = statistics.mean(inference_times)
+
         print(f'====== RESULT ======')
         if inp2 == 1:
             print("Used Historical traces: Baseline Agent")
@@ -233,21 +268,23 @@ if __name__ == '__main__':
             print("Used Historical traces: D-UCB Agent")
         if inp2 == 3:
             print("Used Historical traces: SW-UCB Agent")
+        if inp2 == 3:
+            print("Used Historical traces: UCB-1 Agent")
         print('[total reward]:', env.get_total_reward())
         print('[Hyperparameters]')
         print("epochs: {} lr: {} \nhidden_size: {} time_steps: {} loss function: {}".format(epochs, l_rate, hidden_size, ts, inp1))
 
-
         total_reward = env.get_total_reward()
 
         # used historical trace, total reward, epochs, l_rate, hidden_size, amount of timesteps, 1: MSE, 2: MAE, 3: Huber
-        result.append([inp2, total_reward, epochs, l_rate, hidden_size, ts, inp1])
+        result.append(
+            [inp2, total_reward, epochs, l_rate, hidden_size, ts, inp1,
+             average_inference_time])
 
         with open('results.csv', mode='a', newline='') as file:
             writer = csv.writer(file)
             for row in result:
                 writer.writerow(row)
-
 """
 ====== RESULT ======
 Used Historical traces: Baseline Agent
@@ -301,4 +338,29 @@ Used Historical traces: SW-UCB Agent
 epochs: 10000 lr: 0.001 
 hidden_size: 32 time_steps: 60 loss function: 1
 
+
+====== TESTING======
+[total reward]: 0.559
+
+Difference Strong Baseline = Run 3 - Baseline = 0.559 - 0.506 = 0.053
+Percentage growth = (Difference / Baseline) x 100 = 0.053 / 0.506 x 100 = 10.5%
+
+Difference Weak Baseline = Run 3 - Baseline = 0.559 - 0.317 = 0.242
+Percentage growth = (Difference / Baseline) x 100 = 0.242 / 0.317 x 100 = 76.2%
+
+[total reward]: 0.509
+
+Difference Strong Baseline = Run 3 - Baseline = 0.509 - 0.506 = 0.003
+Percentage growth = (Difference / Baseline) x 100 = 0.003 / 0.506 x 100 = 0.6%
+
+Difference Weak Baseline = Run 3 - Baseline = 0.509 - 0.317 = 0.192
+Percentage growth = (Difference / Baseline) x 100 = 0.192 / 0.317 x 100 = 60.6%
+
+[total reward]: 0.502
+
+Difference Strong Baseline = Run 3 - Baseline = 0.502 - 0.506 = -0.004
+Percentage growth = (Difference / Baseline) x 100 = -0.004 / 0.506 x 100 = -0.8%
+
+Difference Weak Baseline = Run 3 - Baseline = 0.502 - 0.317 = 0.185
+Percentage growth = (Difference / Baseline) x 100 = 0.185 / 0.317 x 100 = 58.4%
 """

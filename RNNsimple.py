@@ -13,7 +13,7 @@ agent = None
 
 # Hyperparameters
 batch_size = 2
-l_rate = 0.005
+l_rate = 0.0001
 #l_rate = 0.01
 hidden_size = 16
 time_steps = 9*60
