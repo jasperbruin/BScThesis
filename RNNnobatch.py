@@ -16,22 +16,22 @@ if not torch.backends.mps.is_available():
     else:
         print("MPS not available because the current MacOS version is not 12.3+ "
               "and/or you do not have an MPS-enabled device on this machine.")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 else:
     device = torch.device("mps")
 
-print("device: ", device)
 
 baseline_agent = None
 agent = None
 
 # Hyperparameters
 # 0.005
-l_rate = 0.005
-hidden_size = 1
-time_steps = [9*60]
+l_rate = 0.001
+hidden_size = 10
+time_steps = [3*60]
 epochs = 5000
-patience = 3
+patience = 5
 
 best_val_loss = float('inf')
 epochs_without_improvement = 0
@@ -240,6 +240,7 @@ if __name__ == '__main__':
 
         total_reward = env.get_total_reward()
 
+        # used historical trace, total reward, epochs, l_rate, hidden_size, amount of timesteps, 1: MSE, 2: MAE, 3: Huber
         result.append([inp2, total_reward, epochs, l_rate, hidden_size, ts, inp1])
 
         with open('results.csv', mode='a', newline='') as file:
@@ -268,5 +269,36 @@ Used Historical traces: SW-UCB Agent
 [Hyperparameters]
 epochs: 5000 lr: 0.001 
 hidden_size: 16 time_steps: 60 loss function: 1
+
+
+====== RESULT ======
+Used Historical traces: Baseline Agent
+[total reward]: 0.387
+[Hyperparameters]
+epochs: 5000 lr: 0.001 
+hidden_size: 1 time_steps: 540 loss function: 1
+
+
+====== RESULT ======
+Used Historical traces: Baseline Agent
+[total reward]: 0.522
+[Hyperparameters]
+epochs: 5000 lr: 0.001 
+hidden_size: 32 time_steps: 60 loss function: 1
+
+
+====== RESULT ======
+Used Historical traces: D-UCB Agent
+[total reward]: 0.491
+[Hyperparameters]
+epochs: 10000 lr: 0.001 
+hidden_size: 32 time_steps: 60 loss function: 1
+
+====== RESULT ======
+Used Historical traces: SW-UCB Agent
+[total reward]: 0.494
+[Hyperparameters]
+epochs: 10000 lr: 0.001 
+hidden_size: 32 time_steps: 60 loss function: 1
 
 """

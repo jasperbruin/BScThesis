@@ -17,6 +17,8 @@ if not torch.backends.mps.is_available():
         print("MPS not available because the current MacOS version is not 12.3+ "
               "and/or you do not have an MPS-enabled device on this machine.")
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 else:
     device = torch.device("mps")
 
