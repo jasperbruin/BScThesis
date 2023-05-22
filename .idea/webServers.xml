@@ -9,6 +9,13 @@
           </advancedOptions>
         </fileTransfer>
       </webServer>
+      <webServer id="8bbe81aa-ccac-446c-b28e-9f58e75a695f" name="sne">
+        <fileTransfer rootFolder="/home/jasper" accessType="SFTP" host="sne-gpu-01.lab.uvalight.net" port="22" sshConfigId="51700e26-04a7-464a-8869-e6887e9a4b4f" sshConfig="jasper@sne-gpu-01.lab.uvalight.net:22 agent" authAgent="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" isUseRsync="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
     </option>
   </component>
 </project>

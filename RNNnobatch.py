@@ -16,7 +16,7 @@ if not torch.backends.mps.is_available():
         print("MPS not available because the current PyTorch install was not "
               "built with MPS enabled.")
     else:
-        print("MPS not available because the current MacOS version is not 12.3+ "
+        print("MPS not available because the current MacOS version is not 12.3+"
               "and/or you do not have an MPS-enabled device on this machine.")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -30,7 +30,8 @@ agent = None
 
 l_rate = 0.001
 hidden_size = 32
-time_steps = [2*60]
+# 1 to 60 time steps
+time_steps = [60]
 epochs = 5000
 patience = 5
 
@@ -268,8 +269,9 @@ if __name__ == '__main__':
             print("Used Historical traces: D-UCB Agent")
         if inp2 == 3:
             print("Used Historical traces: SW-UCB Agent")
-        if inp2 == 3:
+        if inp2 == 4:
             print("Used Historical traces: UCB-1 Agent")
+
         print('[total reward]:', env.get_total_reward())
         print('[Hyperparameters]')
         print("epochs: {} lr: {} \nhidden_size: {} time_steps: {} loss function: {}".format(epochs, l_rate, hidden_size, ts, inp1))
@@ -285,82 +287,3 @@ if __name__ == '__main__':
             writer = csv.writer(file)
             for row in result:
                 writer.writerow(row)
-"""
-====== RESULT ======
-Used Historical traces: Baseline Agent
-[total reward]: 0.534
-[Hyperparameters]
-epochs: 5000 lr: 0.001 
-hidden_size: 16 time_steps: 60 loss function: 1
-
-====== RESULT ======
-Used Historical traces: D-UCB Agent
-[total reward]: 0.509
-[Hyperparameters]
-epochs: 5000 lr: 0.001 
-hidden_size: 16 time_steps: 60 loss function: 1
-
-====== RESULT ======
-Used Historical traces: SW-UCB Agent
-[total reward]: 0.502
-[Hyperparameters]
-epochs: 5000 lr: 0.001 
-hidden_size: 16 time_steps: 60 loss function: 1
-
-
-====== RESULT ======
-Used Historical traces: Baseline Agent
-[total reward]: 0.387
-[Hyperparameters]
-epochs: 5000 lr: 0.001 
-hidden_size: 1 time_steps: 540 loss function: 1
-
-
-====== RESULT ======
-Used Historical traces: Baseline Agent
-[total reward]: 0.522
-[Hyperparameters]
-epochs: 5000 lr: 0.001 
-hidden_size: 32 time_steps: 60 loss function: 1
-
-
-====== RESULT ======
-Used Historical traces: D-UCB Agent
-[total reward]: 0.491
-[Hyperparameters]
-epochs: 10000 lr: 0.001 
-hidden_size: 32 time_steps: 60 loss function: 1
-
-====== RESULT ======
-Used Historical traces: SW-UCB Agent
-[total reward]: 0.494
-[Hyperparameters]
-epochs: 10000 lr: 0.001 
-hidden_size: 32 time_steps: 60 loss function: 1
-
-
-====== TESTING======
-[total reward]: 0.559
-
-Difference Strong Baseline = Run 3 - Baseline = 0.559 - 0.506 = 0.053
-Percentage growth = (Difference / Baseline) x 100 = 0.053 / 0.506 x 100 = 10.5%
-
-Difference Weak Baseline = Run 3 - Baseline = 0.559 - 0.317 = 0.242
-Percentage growth = (Difference / Baseline) x 100 = 0.242 / 0.317 x 100 = 76.2%
-
-[total reward]: 0.509
-
-Difference Strong Baseline = Run 3 - Baseline = 0.509 - 0.506 = 0.003
-Percentage growth = (Difference / Baseline) x 100 = 0.003 / 0.506 x 100 = 0.6%
-
-Difference Weak Baseline = Run 3 - Baseline = 0.509 - 0.317 = 0.192
-Percentage growth = (Difference / Baseline) x 100 = 0.192 / 0.317 x 100 = 60.6%
-
-[total reward]: 0.502
-
-Difference Strong Baseline = Run 3 - Baseline = 0.502 - 0.506 = -0.004
-Percentage growth = (Difference / Baseline) x 100 = -0.004 / 0.506 x 100 = -0.8%
-
-Difference Weak Baseline = Run 3 - Baseline = 0.502 - 0.317 = 0.185
-Percentage growth = (Difference / Baseline) x 100 = 0.185 / 0.317 x 100 = 58.4%
-"""
