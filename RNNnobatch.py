@@ -1,6 +1,7 @@
 import statistics
 import time
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
 from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent, SlidingWindowUCBAgent, UCBAgent
@@ -8,7 +9,9 @@ import torch
 from torch import nn
 from torch.optim import Adam
 import csv
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
+from sklearn.utils import resample
 
 # Function to set the device to CUDA if available
 # Check that MPS is available
@@ -23,53 +26,6 @@ if not torch.backends.mps.is_available():
 
 else:
     device = torch.device("mps")
-
-
-baseline_agent = None
-agent = None
-
-
-l_rate = 0.001
-hidden_size = 64
-# 1 to 60 time steps
-time_steps = [60]
-epochs = 100000
-patience = 10
-agent_type = 'simple'
-
-best_val_loss = float('inf')
-epochs_without_improvement = 0
-result = []
-training_losses = []
-validation_losses = []
-
-def get_train_test(states, split_percent=0.8):
-    n = len(states)
-    split = int(n * split_percent)
-    train_states = states[:split]
-    test_states = states[split:]
-    return train_states, test_states
-
-def get_XY(states, time_steps=1):
-    states = np.array(states)
-    X, Y = [], []
-    for i in range(len(states) - time_steps):
-        X.append(states[i : (i + time_steps)])
-        Y.append(states[i + time_steps])
-    return np.array(X), np.array(Y)
-
-def impute_missing_values(states):
-    imputed_states = []
-    for state in states:
-        mean_values = np.mean([v for v in state if v >= 0])
-        imputed_state = np.array([v if v >= 0 else mean_values for v in state])
-        imputed_states.append(imputed_state)
-    return np.array(imputed_states)
-
-def imv(state):
-    mean_value = np.mean([v for v in state if v >= 0])
-    imputed_state = np.array([v if v >= 0 else mean_value for v in state])
-    return imputed_state
 
 
 def create_training_traces(env, mode, inp):
@@ -150,6 +106,73 @@ def create_training_traces(env, mode, inp):
         return states
 
 
+baseline_agent = None
+agent = None
+
+l_rate = 0.001
+hidden_size = 1
+# 1 to 60 time steps
+time_steps = [9*60]
+epochs = 100000
+patience = 20
+agent_type = 'strong'
+
+best_val_loss = float('inf')
+epochs_without_improvement = 0
+result = []
+training_losses = []
+validation_losses = []
+
+def get_train_test(states, split_percent=0.8):
+    n = len(states)
+    split = int(n * split_percent)
+    train_states = states[:split]
+    test_states = states[split:]
+    return train_states, test_states
+
+def get_XY(states, time_steps=1):
+    states = np.array(states)
+    X, Y = [], []
+    for i in range(len(states) - time_steps):
+        X.append(states[i : (i + time_steps)])
+        Y.append(states[i + time_steps])
+    return np.array(X), np.array(Y)
+
+def impute_missing_values(states):
+    imputed_states = []
+    for state in states:
+        median_values = np.median([v for v in state if v >= 0])
+        imputed_state = np.array([v if v >= 0 else median_values for v in state])
+        imputed_states.append(imputed_state)
+    return np.array(imputed_states)
+
+def imv(state):
+    median_value = np.median([v for v in state if v >= 0])
+    imputed_state = np.array([v if v >= 0 else median_value for v in state])
+    return imputed_state
+
+
+def balance_classes(train_data, train_labels, max_samples=500):
+    classes = np.unique(train_labels)
+    balanced_train_data = []
+    balanced_train_labels = []
+    for cls in classes:
+        class_idx = np.where(train_labels == cls)[0]
+        class_data = train_data[class_idx]
+        class_labels = train_labels[class_idx]
+
+        if len(class_data) > max_samples:
+            class_data, class_labels = resample(class_data, class_labels,
+                                                replace=False,
+                                                n_samples=max_samples,
+                                                random_state=42)
+
+        balanced_train_data.append(class_data)
+        balanced_train_labels.append(class_labels)
+
+    return np.concatenate(balanced_train_data), np.concatenate(
+        balanced_train_labels)
+
 if __name__ == '__main__':
     inp1 = int(input("1. MSE\n2. MAE \n3. Huber\n"))
     if inp1 == 1:
@@ -178,8 +201,7 @@ if __name__ == '__main__':
     optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
 
     # Learning rate scheduler
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10,
-                                                gamma=0.1)
+    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10,gamma=0.1)
 
     for ts in time_steps:
         trainX, trainY = get_XY(train_data, ts)
@@ -204,7 +226,7 @@ if __name__ == '__main__':
             loss.backward()
 
             optimizer.step()
-            scheduler.step()
+            # scheduler.step()
 
             # Validation
             val_outputs, (_, _) = lstm_agent(testX,
@@ -242,8 +264,11 @@ if __name__ == '__main__':
         cell_state = cell_state.to(device)
 
         inference_times = []
+        rewards = []  # To store the rewards at each timestep
+
         for t in tqdm(range(env.length), initial=2):
             # Prepare the input state for the LSTM agent
+            print(state)
             input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(
                 0).unsqueeze(0).to(
                 device)  # Add the batch and sequence dimensions
@@ -266,6 +291,7 @@ if __name__ == '__main__':
             # Perform the action in the environment
             reward, state, stop = env.step(action)
             state = impute_missing_values([state])[0]
+            rewards.append(reward)  # Append the reward at each timestep
 
             if stop:
                 break
@@ -284,7 +310,9 @@ if __name__ == '__main__':
 
         print('[total reward]:', env.get_total_reward())
         print('[Hyperparameters]')
-        print("epochs: {} lr: {} \nhidden_size: {} time_steps: {} loss function: {}".format(epochs, l_rate, hidden_size, ts, inp1))
+        print(
+            "epochs: {} lr: {} \nhidden_size: {} time_steps: {} loss function: {}".format(
+                epochs, l_rate, hidden_size, ts, inp1))
 
         total_reward = env.get_total_reward()
 
@@ -297,6 +325,13 @@ if __name__ == '__main__':
             writer = csv.writer(file)
             for row in result:
                 writer.writerow(row)
+
+        # Plot the rewards over timesteps
+        plt.plot(range(len(rewards)), rewards)
+        plt.xlabel('Timestep')
+        plt.ylabel('Reward')
+        plt.title('Reward over Timesteps')
+        plt.show()
 
 
 
