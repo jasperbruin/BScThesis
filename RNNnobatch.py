@@ -34,7 +34,7 @@ l_rate = 0.001
 hidden_size = 1
 # 1 to 60 time steps
 time_steps = [60]
-epochs = 10000
+epochs = 2500
 patience = 10
 agent_type = 'strong'
 
@@ -168,10 +168,25 @@ def imv(state):
     return imputed_state
 
 
-def balance_classes(train_data, train_labels, target_samples=500):
+def get_class_distribution(labels):
+    # Convert one-hot encoded labels to integer labels
+    int_labels = np.argmax(labels, axis=1)
+    return np.bincount(int_labels)
+
+
+def upsample_classes(train_data, train_labels):
     classes = np.unique(train_labels)
     upsampled_train_data = []
     upsampled_train_labels = []
+
+    # Get the distribution of classes
+    class_distribution = get_class_distribution(train_labels)
+
+    print("Distribution of classes before balancing:", class_distribution)
+
+    # Set the target number of samples to be the maximum count among all classes
+    target_samples = np.max(class_distribution)
+
     for cls in classes:
         class_idx = np.where(train_labels == cls)[0]
         class_data = train_data[class_idx]
@@ -181,12 +196,16 @@ def balance_classes(train_data, train_labels, target_samples=500):
             class_data, class_labels = resample(class_data, class_labels,
                                                 replace=True,  # sample with replacement
                                                 n_samples=target_samples,  # to match majority class
-                                                random_state=43)  # reproducible results
+                                                random_state=123)  # reproducible results
 
         upsampled_train_data.append(class_data)
         upsampled_train_labels.append(class_labels)
 
-    return np.concatenate(upsampled_train_data), np.concatenate(upsampled_train_labels)
+    upsampled_train_labels = np.concatenate(upsampled_train_labels)
+
+    print("Distribution of classes after balancing:", get_class_distribution(upsampled_train_labels))
+
+    return np.concatenate(upsampled_train_data), upsampled_train_labels
 
 if __name__ == '__main__':
     inp1 = int(input("1. MSE\n2. MAE \n3. Huber\n"))
@@ -219,12 +238,11 @@ if __name__ == '__main__':
     # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10,gamma=0.1)
 
     for ts in time_steps:
+        # Use the function on your data
         trainX, trainY = get_XY(train_data, ts)
-        trainX, trainY = balance_classes(trainX, trainY, target_samples=500)
+        trainX, trainY = upsample_classes(trainX, trainY)
+
         testX, testY = get_XY(test_data, ts)
-
-
-
         trainX = torch.tensor(trainX, dtype=torch.float32).to(device)
         trainY = torch.tensor(trainY, dtype=torch.float32).to(device)
         testX = torch.tensor(testX, dtype=torch.float32).to(device)
