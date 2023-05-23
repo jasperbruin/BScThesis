@@ -8,6 +8,7 @@ import torch
 from torch import nn
 from torch.optim import Adam
 import csv
+#import matplotlib.pyplot as plt
 
 # Function to set the device to CUDA if available
 # Check that MPS is available
@@ -29,15 +30,18 @@ agent = None
 
 
 l_rate = 0.001
-hidden_size = 32
+hidden_size = 64
 # 1 to 60 time steps
 time_steps = [60]
-epochs = 5000
-patience = 5
+epochs = 100000
+patience = 10
+agent_type = 'simple'
 
 best_val_loss = float('inf')
 epochs_without_improvement = 0
 result = []
+training_losses = []
+validation_losses = []
 
 def get_train_test(states, split_percent=0.8):
     n = len(states)
@@ -72,7 +76,7 @@ def create_training_traces(env, mode, inp):
     # Training
     env.reset(mode)
     if inp == 1:
-        baseline_agent = baselineAgent()
+        baseline_agent = baselineAgent(agent_type=agent_type)
         states = []
 
         # Generate training traces from the Baseline agent
@@ -173,6 +177,10 @@ if __name__ == '__main__':
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size).to(device)
     optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
 
+    # Learning rate scheduler
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10,
+                                                gamma=0.1)
+
     for ts in time_steps:
         trainX, trainY = get_XY(train_data, ts)
         testX, testY = get_XY(test_data, ts)
@@ -189,13 +197,14 @@ if __name__ == '__main__':
                 batch_size=trainX.size(0))
             hidden_state = hidden_state.to(device)
             cell_state = cell_state.to(device)
-
             optimizer.zero_grad()
             outputs, (hidden_state, cell_state) = lstm_agent(trainX, (
             hidden_state, cell_state))
             loss = criterion(outputs, trainY)
             loss.backward()
+
             optimizer.step()
+            scheduler.step()
 
             # Validation
             val_outputs, (_, _) = lstm_agent(testX,
@@ -209,11 +218,12 @@ if __name__ == '__main__':
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 epochs_without_improvement = 0
+                best_epoch = epoch
             else:
                 epochs_without_improvement += 1
 
             print(
-                f'Epoch: {epoch + 1}, Loss: {round(loss.item(), 3)}, Validation Loss: {round(val_loss.item(), 3)}')
+                f'Epoch: {epoch + 1}, Training Loss: {round(loss.item(), 3)}, Validation Loss: {round(val_loss.item(), 3)}')
 
             if epochs_without_improvement >= patience:
                 print("Early stopping")
@@ -280,10 +290,47 @@ if __name__ == '__main__':
 
         # used historical trace, total reward, epochs, l_rate, hidden_size, amount of timesteps, 1: MSE, 2: MAE, 3: Huber
         result.append(
-            [inp2, total_reward, epochs, l_rate, hidden_size, ts, inp1,
-             average_inference_time])
+            [inp2, total_reward, best_epoch, epochs, l_rate, hidden_size, ts,
+             inp1, average_inference_time])
 
         with open('results.csv', mode='a', newline='') as file:
             writer = csv.writer(file)
             for row in result:
                 writer.writerow(row)
+
+
+
+"""
+====== TESTING======
+[total reward]: 0.559
+
+Difference Strong Baseline = Run 3 - Baseline = 0.559 - 0.506 = 0.053
+Percentage growth = (Difference / Baseline) x 100 = 0.053 / 0.506 x 100 = 10.5%
+
+Difference Weak Baseline = Run 3 - Baseline = 0.559 - 0.317 = 0.242
+Percentage growth = (Difference / Baseline) x 100 = 0.242 / 0.317 x 100 = 76.2%
+
+[total reward]: 0.509
+
+Difference Strong Baseline = Run 3 - Baseline = 0.509 - 0.506 = 0.003
+Percentage growth = (Difference / Baseline) x 100 = 0.003 / 0.506 x 100 = 0.6%
+
+Difference Weak Baseline = Run 3 - Baseline = 0.509 - 0.317 = 0.192
+Percentage growth = (Difference / Baseline) x 100 = 0.192 / 0.317 x 100 = 60.6%
+
+[total reward]: 0.502
+
+Difference Strong Baseline = Run 3 - Baseline = 0.502 - 0.506 = -0.004
+Percentage growth = (Difference / Baseline) x 100 = -0.004 / 0.506 x 100 = -0.8%
+
+Difference Weak Baseline = Run 3 - Baseline = 0.502 - 0.317 = 0.185
+Percentage growth = (Difference / Baseline) x 100 = 0.185 / 0.317 x 100 = 58.4%
+
+[total reward]: 0.525
+
+Difference Strong Baseline = Run 3 - Baseline = 0.525 - 0.506 = 0.019
+Percentage growth = (Difference / Baseline) x 100 = 0.019 / 0.506 x 100 = 3.8%
+
+Difference Weak Baseline = Run 3 - Baseline = 0.525 - 0.317 = 0.208
+Percentage growth = (Difference / Baseline) x 100 = 0.208 / 0.317 x 100 = 65.6%
+"""
