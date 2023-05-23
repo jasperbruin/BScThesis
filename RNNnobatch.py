@@ -28,6 +28,22 @@ else:
     device = torch.device("mps")
 
 
+
+
+l_rate = 0.001
+hidden_size = 1
+# 1 to 60 time steps
+time_steps = [60]
+epochs = 10000
+patience = 10
+agent_type = 'strong'
+
+best_val_loss = float('inf')
+epochs_without_improvement = 0
+result = []
+training_losses = []
+validation_losses = []
+
 def create_training_traces(env, mode, inp):
     # Training
     env.reset(mode)
@@ -109,20 +125,6 @@ def create_training_traces(env, mode, inp):
 baseline_agent = None
 agent = None
 
-l_rate = 0.001
-hidden_size = 1
-# 1 to 60 time steps
-time_steps = [9*60]
-epochs = 100000
-patience = 20
-agent_type = 'strong'
-
-best_val_loss = float('inf')
-epochs_without_improvement = 0
-result = []
-training_losses = []
-validation_losses = []
-
 def get_train_test(states, split_percent=0.8):
     n = len(states)
     split = int(n * split_percent)
@@ -138,7 +140,21 @@ def get_XY(states, time_steps=1):
         Y.append(states[i + time_steps])
     return np.array(X), np.array(Y)
 
+# def impute_missing_values(states):
+#     imputed_states = []
+#     for state in states:
+#         mean_values = np.mean([v for v in state if v >= 0])
+#         imputed_state = np.array([v if v >= 0 else mean_values for v in state])
+#         imputed_states.append(imputed_state)
+#     return np.array(imputed_states)
+#
+# def imv(state):
+#     mean_value = np.mean([v for v in state if v >= 0])
+#     imputed_state = np.array([v if v >= 0 else mean_value for v in state])
+#     return imputed_state
+
 def impute_missing_values(states):
+    # median impuation
     imputed_states = []
     for state in states:
         median_values = np.median([v for v in state if v >= 0])
@@ -152,26 +168,25 @@ def imv(state):
     return imputed_state
 
 
-def balance_classes(train_data, train_labels, max_samples=500):
+def balance_classes(train_data, train_labels, target_samples=500):
     classes = np.unique(train_labels)
-    balanced_train_data = []
-    balanced_train_labels = []
+    upsampled_train_data = []
+    upsampled_train_labels = []
     for cls in classes:
         class_idx = np.where(train_labels == cls)[0]
         class_data = train_data[class_idx]
         class_labels = train_labels[class_idx]
 
-        if len(class_data) > max_samples:
+        if len(class_data) < target_samples:
             class_data, class_labels = resample(class_data, class_labels,
-                                                replace=False,
-                                                n_samples=max_samples,
-                                                random_state=42)
+                                                replace=True,  # sample with replacement
+                                                n_samples=target_samples,  # to match majority class
+                                                random_state=43)  # reproducible results
 
-        balanced_train_data.append(class_data)
-        balanced_train_labels.append(class_labels)
+        upsampled_train_data.append(class_data)
+        upsampled_train_labels.append(class_labels)
 
-    return np.concatenate(balanced_train_data), np.concatenate(
-        balanced_train_labels)
+    return np.concatenate(upsampled_train_data), np.concatenate(upsampled_train_labels)
 
 if __name__ == '__main__':
     inp1 = int(input("1. MSE\n2. MAE \n3. Huber\n"))
@@ -205,7 +220,10 @@ if __name__ == '__main__':
 
     for ts in time_steps:
         trainX, trainY = get_XY(train_data, ts)
+        trainX, trainY = balance_classes(trainX, trainY, target_samples=500)
         testX, testY = get_XY(test_data, ts)
+
+
 
         trainX = torch.tensor(trainX, dtype=torch.float32).to(device)
         trainY = torch.tensor(trainY, dtype=torch.float32).to(device)
@@ -235,6 +253,8 @@ if __name__ == '__main__':
             hidden_state = hidden_state.to(device)
             cell_state = cell_state.to(device)
             val_loss = criterion(val_outputs, testY)
+            validation_losses.append(round(val_loss.item(), 3))  # Append the reward at each timestep
+            training_losses.append(round(loss.item(), 3))  # Append the reward at each timestep
 
             # Early stopping
             if val_loss < best_val_loss:
@@ -243,6 +263,7 @@ if __name__ == '__main__':
                 best_epoch = epoch
             else:
                 epochs_without_improvement += 1
+
 
             print(
                 f'Epoch: {epoch + 1}, Training Loss: {round(loss.item(), 3)}, Validation Loss: {round(val_loss.item(), 3)}')
@@ -264,11 +285,11 @@ if __name__ == '__main__':
         cell_state = cell_state.to(device)
 
         inference_times = []
-        rewards = []  # To store the rewards at each timestep
+
 
         for t in tqdm(range(env.length), initial=2):
             # Prepare the input state for the LSTM agent
-            print(state)
+            # print(state)
             input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(
                 0).unsqueeze(0).to(
                 device)  # Add the batch and sequence dimensions
@@ -291,7 +312,7 @@ if __name__ == '__main__':
             # Perform the action in the environment
             reward, state, stop = env.step(action)
             state = impute_missing_values([state])[0]
-            rewards.append(reward)  # Append the reward at each timestep
+
 
             if stop:
                 break
@@ -326,11 +347,15 @@ if __name__ == '__main__':
             for row in result:
                 writer.writerow(row)
 
-        # Plot the rewards over timesteps
-        plt.plot(range(len(rewards)), rewards)
-        plt.xlabel('Timestep')
-        plt.ylabel('Reward')
-        plt.title('Reward over Timesteps')
+        # Plot the validation and training losses
+        plt.plot(range(len(validation_losses)), validation_losses)
+        plt.plot(range(len(training_losses)), training_losses)
+        plt.legend(['Validation Loss', 'Training Loss'])
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.title('Validation and Training Losses')
+
+        plt.savefig('losses.png')
         plt.show()
 
 
