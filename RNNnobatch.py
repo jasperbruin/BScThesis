@@ -10,11 +10,17 @@ from torch import nn
 from torch.optim import Adam
 import csv
 import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d
 from sklearn.utils import resample
 
-# Function to set the device to CUDA if available
-# Check that MPS is available
+class LogCoshLoss(nn.Module):
+    def __init__(self):
+        super(LogCoshLoss, self).__init__()
+
+    def forward(self, true, pred):
+        loss = torch.log(torch.cosh(pred - true))
+        return torch.mean(loss)
+
+
 if not torch.backends.mps.is_available():
     if not torch.backends.mps.is_built():
         print("MPS not available because the current PyTorch install was not "
@@ -31,10 +37,9 @@ else:
 
 
 l_rate = 0.001
-hidden_size = 1
-# 1 to 60 time steps
+hidden_size = 16
 time_steps = [60]
-epochs = 2500
+epochs = 10000
 patience = 10
 agent_type = 'strong'
 
@@ -140,19 +145,6 @@ def get_XY(states, time_steps=1):
         Y.append(states[i + time_steps])
     return np.array(X), np.array(Y)
 
-# def impute_missing_values(states):
-#     imputed_states = []
-#     for state in states:
-#         mean_values = np.mean([v for v in state if v >= 0])
-#         imputed_state = np.array([v if v >= 0 else mean_values for v in state])
-#         imputed_states.append(imputed_state)
-#     return np.array(imputed_states)
-#
-# def imv(state):
-#     mean_value = np.mean([v for v in state if v >= 0])
-#     imputed_state = np.array([v if v >= 0 else mean_value for v in state])
-#     return imputed_state
-
 def impute_missing_values(states):
     # median impuation
     imputed_states = []
@@ -168,53 +160,78 @@ def imv(state):
     return imputed_state
 
 
+def verify_labels(train_data, train_labels, balanced_train_data, balanced_train_labels):
+    # Label Consistency
+    # print("First instance before balancing: ", train_data[0], "Label: ", train_labels[0])
+    # print("First instance after balancing: ", balanced_train_data[0], "Label: ", balanced_train_labels[0])
+
+    # Label Distribution
+    print("Label distribution before balancing: ", get_class_distribution(train_labels))
+    print("Label distribution after balancing: ", get_class_distribution(balanced_train_labels))
+
+    # Number of Labels
+    print("Number of instances and labels before balancing: ", len(train_data), len(train_labels))
+    print("Number of instances and labels after balancing: ", len(balanced_train_data), len(balanced_train_labels))
+
+    # Unique Labels
+    print("Unique labels before balancing: ", np.unique(train_labels))
+    print("Unique labels after balancing: ", np.unique(balanced_train_labels))
+
+
 def get_class_distribution(labels):
-    # Convert one-hot encoded labels to integer labels
-    int_labels = np.argmax(labels, axis=1)
-    return np.bincount(int_labels)
+    labels_argmax = np.argmax(labels, axis=1)
+    hist, bin_edges = np.histogram(labels_argmax, bins=range(labels_argmax.max()+2))
+    return hist
 
-
-def upsample_classes(train_data, train_labels):
+def balance_classes(train_data, train_labels):
     classes = np.unique(train_labels)
-    upsampled_train_data = []
-    upsampled_train_labels = []
-
+    balanced_train_data = []
+    balanced_train_labels = []
     # Get the distribution of classes
     class_distribution = get_class_distribution(train_labels)
 
-    print("Distribution of classes before balancing:", class_distribution)
-
     # Set the target number of samples to be the maximum count among all classes
-    target_samples = np.max(class_distribution)
+    max_samples = np.max(class_distribution)
 
     for cls in classes:
         class_idx = np.where(train_labels == cls)[0]
         class_data = train_data[class_idx]
         class_labels = train_labels[class_idx]
 
-        if len(class_data) < target_samples:
+        if len(class_data) > max_samples:
             class_data, class_labels = resample(class_data, class_labels,
-                                                replace=True,  # sample with replacement
-                                                n_samples=target_samples,  # to match majority class
-                                                random_state=123)  # reproducible results
+                                                replace=False,
+                                                n_samples=max_samples,
+                                                random_state=42)
 
-        upsampled_train_data.append(class_data)
-        upsampled_train_labels.append(class_labels)
+        balanced_train_data.append(class_data)
+        balanced_train_labels.append(class_labels)
 
-    upsampled_train_labels = np.concatenate(upsampled_train_labels)
+    balanced_train_data, balanced_train_labels = np.concatenate(balanced_train_data), np.concatenate(balanced_train_labels)
 
-    print("Distribution of classes after balancing:", get_class_distribution(upsampled_train_labels))
+    print("Distribution of classes after balancing:", get_class_distribution(balanced_train_labels))
 
-    return np.concatenate(upsampled_train_data), upsampled_train_labels
+    # Shuffle data
+    shuffle_indices = np.random.permutation(len(balanced_train_data))
+    balanced_train_data = balanced_train_data[shuffle_indices]
+    balanced_train_labels = balanced_train_labels[shuffle_indices]
+
+    verify_labels(train_data, train_labels, balanced_train_data, balanced_train_labels)
+
+    return balanced_train_data, balanced_train_labels
+
 
 if __name__ == '__main__':
-    inp1 = int(input("1. MSE\n2. MAE \n3. Huber\n"))
+    inp1 = int(input("1. MSE\n2. MAE \n3. Huber\n 4. LogCosh"))
     if inp1 == 1:
         criterion = nn.MSELoss()
     if inp1 == 2:
         criterion = nn.L1Loss()
     if inp1 == 3:
         criterion = nn.HuberLoss()
+    if inp1 == 4:
+        criterion = LogCoshLoss()
+
 
     np.random.seed(0)
 
@@ -234,13 +251,10 @@ if __name__ == '__main__':
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size).to(device)
     optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
 
-    # Learning rate scheduler
-    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10,gamma=0.1)
-
     for ts in time_steps:
         # Use the function on your data
         trainX, trainY = get_XY(train_data, ts)
-        trainX, trainY = upsample_classes(trainX, trainY)
+        trainX, trainY = balance_classes(trainX, trainY)
 
         testX, testY = get_XY(test_data, ts)
         trainX = torch.tensor(trainX, dtype=torch.float32).to(device)
@@ -262,7 +276,6 @@ if __name__ == '__main__':
             loss.backward()
 
             optimizer.step()
-            # scheduler.step()
 
             # Validation
             val_outputs, (_, _) = lstm_agent(testX,
@@ -304,7 +317,7 @@ if __name__ == '__main__':
 
         inference_times = []
 
-
+        reward_on_time = []
         for t in tqdm(range(env.length), initial=2):
             # Prepare the input state for the LSTM agent
             # print(state)
@@ -329,6 +342,7 @@ if __name__ == '__main__':
 
             # Perform the action in the environment
             reward, state, stop = env.step(action)
+            reward_on_time.append(reward)
             state = impute_missing_values([state])[0]
 
 
@@ -374,6 +388,15 @@ if __name__ == '__main__':
         plt.title('Validation and Training Losses')
 
         plt.savefig('losses.png')
+        #plt.show()
+
+        # plot the reward on time
+        plt.plot(range(len(reward_on_time)), reward_on_time)
+        plt.xlabel('Time')
+        plt.ylabel('Reward')
+        plt.title('Reward on time')
+
+        plt.savefig('reward_on_time.png')
         plt.show()
 
 

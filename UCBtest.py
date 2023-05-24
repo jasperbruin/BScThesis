@@ -2,6 +2,7 @@ import csv
 
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
 from agents import SlidingWindowUCBAgent, UCBAgent, DiscountedUCBAgent, baselineAgent
@@ -392,6 +393,15 @@ def robustness_test(agent_type, budget_ratios):
 #     budget_ratios, rewards_simple_baseline = robustness_test(4, budget_ratios)
 #     budget_ratios, rewards_strong_baseline = robustness_test(5, budget_ratios)
 #
+#     # save results to csv
+#     df = pd.DataFrame({'budget_ratios': budget_ratios,
+#                           'rewards_ucb1': rewards_ucb1,
+#                             'rewards_sw_ucb': rewards_sw_ucb,
+#                             'rewards_d_ucb': rewards_d_ucb,
+#                             'rewards_simple_baseline': rewards_simple_baseline,
+#                             'rewards_strong_baseline': rewards_strong_baseline})
+#     df.to_csv('robustness_test.csv', index=False)
+#
 #
 #     # Plot the results
 #     plt.figure(figsize=(8, 6))
@@ -418,49 +428,49 @@ def robustness_test(agent_type, budget_ratios):
 #     plt.show()
 
 
-if __name__ == '__main__':
-    print("Enter the agent you want to test: ")
-    inp = int(input('1. UCB-1 \n2. SW-UCB \n3. D-UCB\n4. Time experiment\n'))
-    if inp == 1:
-        SWUCBOpt(1)
-    elif inp == 2:
-        inp2 = int(input('Find optimal window size? (1. Yes, 2. No)'))
-        if inp2 == 1:
-            SWUCBExperiment()
-        elif inp2 == 2:
-            SWUCBOpt(2)
-    elif inp == 3:
-        inp2 = int(input('Find optimal gamma? (1. Yes, 2. No)'))
-        if inp2 == 1:
-            DiscountedUCBExperiment()
-        elif inp2 == 2:
-            SWUCBOpt(3)
-    elif inp == 4:
-        sw_ucb_inference_times = timeexperiment(2)
-        ucb1_inference_times = timeexperiment(1)
-        d_ucb_inference_times = timeexperiment(3)
-
-        # Plot the average inference times for each agent as a bar plot
-        agents = ['SW-UCB', 'UCB-1', 'D-UCB']
-        avg_inference_times = [sw_ucb_inference_times, ucb1_inference_times,
-                               d_ucb_inference_times]
-
-        print(avg_inference_times)
-
-        # Black and white color palette
-        colors = ['#333333', '#666666', '#999999']
-
-        plt.bar(agents, avg_inference_times, color=colors, edgecolor='black',
-                linewidth=1)
-        plt.xlabel('Agent', fontsize=12)
-        plt.ylabel('Average Inference Time (ms)', fontsize=10)
-        plt.title(
-            'Average Inference Time for SW-UCB, UCB-1, and D-UCB during Training',
-            fontsize=10)
-        plt.grid(axis='y', linestyle='--', alpha=0.7)
-        plt.tight_layout()
-        plt.savefig('UCB_AverageInferenceTime_Training_BW_ms.png')
-        plt.show()
+# if __name__ == '__main__':
+#     print("Enter the agent you want to test: ")
+#     inp = int(input('1. UCB-1 \n2. SW-UCB \n3. D-UCB\n4. Time experiment\n'))
+#     if inp == 1:
+#         SWUCBOpt(1)
+#     elif inp == 2:
+#         inp2 = int(input('Find optimal window size? (1. Yes, 2. No)'))
+#         if inp2 == 1:
+#             SWUCBExperiment()
+#         elif inp2 == 2:
+#             SWUCBOpt(2)
+#     elif inp == 3:
+#         inp2 = int(input('Find optimal gamma? (1. Yes, 2. No)'))
+#         if inp2 == 1:
+#             DiscountedUCBExperiment()
+#         elif inp2 == 2:
+#             SWUCBOpt(3)
+#     elif inp == 4:
+#         sw_ucb_inference_times = timeexperiment(2)
+#         ucb1_inference_times = timeexperiment(1)
+#         d_ucb_inference_times = timeexperiment(3)
+#
+#         # Plot the average inference times for each agent as a bar plot
+#         agents = ['SW-UCB', 'UCB-1', 'D-UCB']
+#         avg_inference_times = [sw_ucb_inference_times, ucb1_inference_times,
+#                                d_ucb_inference_times]
+#
+#         print(avg_inference_times)
+#
+#         # Black and white color palette
+#         colors = ['#333333', '#666666', '#999999']
+#
+#         plt.bar(agents, avg_inference_times, color=colors, edgecolor='black',
+#                 linewidth=1)
+#         plt.xlabel('Agent', fontsize=12)
+#         plt.ylabel('Average Inference Time (ms)', fontsize=10)
+#         plt.title(
+#             'Average Inference Time for SW-UCB, UCB-1, and D-UCB during Training',
+#             fontsize=10)
+#         plt.grid(axis='y', linestyle='--', alpha=0.7)
+#         plt.tight_layout()
+#         plt.savefig('UCB_AverageInferenceTime_Training_BW_ms.png')
+#         plt.show()
 
 """
 Baseline:
