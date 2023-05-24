@@ -5,7 +5,7 @@ from collections import deque
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.checkpoint import checkpoint
+#from torch.utils.checkpoint import checkpoint
 
 # Function to set the device to CUDA if available
 # Check that MPS is available
@@ -184,7 +184,7 @@ class LSTM_Agent(nn.Module):
         self.hidden_size = hidden_size
 
     def forward(self, state, hidden_cell):
-        x, hidden_cell = checkpoint(self.lstm, state, hidden_cell)
+        x, hidden_cell = self.lstm(state, hidden_cell)
         x = x[:, -1, :]
         x = self.dense(x)
         return x, hidden_cell
@@ -193,6 +193,7 @@ class LSTM_Agent(nn.Module):
         hidden_state = torch.zeros(1, batch_size, self.hidden_size).to(device)
         cell_state = torch.zeros(1, batch_size, self.hidden_size).to(device)
         return hidden_state, cell_state
+
 
 
 

@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 # Load the data
-df = pd.read_csv('/Users/jasperbruin/Documents/Programming/BScThesis/results.csv', header=None)
+df = pd.read_csv('/results.csv', header=None)
 
 # Set the column names
 df.columns = ['used historical trace', 'total reward', 'epochs', 'l_rate', 'hidden_size', 'amount of timesteps', 'loss']

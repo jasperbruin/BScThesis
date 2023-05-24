@@ -39,9 +39,9 @@ else:
 l_rate = 0.001
 hidden_size = 16
 time_steps = [60]
-epochs = 10000
+epochs = 2500
 patience = 10
-agent_type = 'strong'
+agent_type = 'simple'
 
 best_val_loss = float('inf')
 epochs_without_improvement = 0
@@ -222,7 +222,7 @@ def balance_classes(train_data, train_labels):
 
 
 if __name__ == '__main__':
-    inp1 = int(input("1. MSE\n2. MAE \n3. Huber\n 4. LogCosh"))
+    inp1 = int(input("1. MSE\n2. MAE \n3. Huber\n4. LogCosh\n"))
     if inp1 == 1:
         criterion = nn.MSELoss()
     if inp1 == 2:
@@ -390,11 +390,13 @@ if __name__ == '__main__':
         plt.savefig('losses.png')
         #plt.show()
 
+
         # plot the reward on time
         plt.plot(range(len(reward_on_time)), reward_on_time)
+
         plt.xlabel('Time')
         plt.ylabel('Reward')
-        plt.title('Reward on time')
+        plt.title(f'Reward on time of agent: {inp2} with total reward: {total_reward}')
 
         plt.savefig('reward_on_time.png')
         plt.show()
