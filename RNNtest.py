@@ -11,6 +11,7 @@ from torch.optim import Adam
 import csv
 import matplotlib.pyplot as plt
 from random import shuffle
+from sklearn.utils import resample
 
 
 class LogCoshLoss(nn.Module):
@@ -131,7 +132,7 @@ def create_training_traces(env, mode, inp):
 baseline_agent = None
 agent = None
 
-def get_train_test(states, split_percent=0.8):
+def get_train_test(states, split_percent=0.7):
     n = len(states)
     split = int(n * split_percent)
     train_states = states[:split]
@@ -161,18 +162,13 @@ def imv(state):
     return imputed_state
 
 
-def undersample(X, Y):
-    X_undersampled, Y_undersampled = [], []
-    for i in range(len(X)):
-        if i % 2 == 0:
-            X_undersampled.append(X[i])
-            Y_undersampled.append(Y[i])
-
-    # shuffle
-    c = list(zip(X_undersampled, Y_undersampled))
+def resample_data(X, Y):
+    X_resampled, Y_resampled = resample(X, Y, replace=True, n_samples=len(X) // 2, random_state=123)
+    c = list(zip(X_resampled, Y_resampled))
     shuffle(c)
-    X_undersampled, Y_undersampled = zip(*c)
-    return np.array(X_undersampled), np.array(Y_undersampled)
+    X_resampled, Y_resampled = zip(*c)
+
+    return X_resampled, Y_resampled
 
 
 if __name__ == '__main__':
@@ -210,7 +206,7 @@ if __name__ == '__main__':
     trainX, trainY = get_XY(train_data, time_steps)
     testX, testY = get_XY(test_data, time_steps)
 
-    trainX, trainY = undersample(trainX, trainY)
+    trainX, trainY = resample_data(trainX, trainY)
 
 
 
@@ -361,36 +357,10 @@ if __name__ == '__main__':
 
 
 """
-====== TESTING======
-[total reward]: 0.559
-
-Difference Strong Baseline = Run 3 - Baseline = 0.559 - 0.506 = 0.053
-Percentage growth = (Difference / Baseline) x 100 = 0.053 / 0.506 x 100 = 10.5%
-
-Difference Weak Baseline = Run 3 - Baseline = 0.559 - 0.317 = 0.242
-Percentage growth = (Difference / Baseline) x 100 = 0.242 / 0.317 x 100 = 76.2%
-
-[total reward]: 0.509
-
-Difference Strong Baseline = Run 3 - Baseline = 0.509 - 0.506 = 0.003
-Percentage growth = (Difference / Baseline) x 100 = 0.003 / 0.506 x 100 = 0.6%
-
-Difference Weak Baseline = Run 3 - Baseline = 0.509 - 0.317 = 0.192
-Percentage growth = (Difference / Baseline) x 100 = 0.192 / 0.317 x 100 = 60.6%
-
-[total reward]: 0.502
-
-Difference Strong Baseline = Run 3 - Baseline = 0.502 - 0.506 = -0.004
-Percentage growth = (Difference / Baseline) x 100 = -0.004 / 0.506 x 100 = -0.8%
-
-Difference Weak Baseline = Run 3 - Baseline = 0.502 - 0.317 = 0.185
-Percentage growth = (Difference / Baseline) x 100 = 0.185 / 0.317 x 100 = 58.4%
-
-[total reward]: 0.525
-
-Difference Strong Baseline = Run 3 - Baseline = 0.525 - 0.506 = 0.019
-Percentage growth = (Difference / Baseline) x 100 = 0.019 / 0.506 x 100 = 3.8%
-
-Difference Weak Baseline = Run 3 - Baseline = 0.525 - 0.317 = 0.208
-Percentage growth = (Difference / Baseline) x 100 = 0.208 / 0.317 x 100 = 65.6%
+====== RESULT ======
+Used Historical traces: Baseline Agent
+[total reward]: 0.532
+[Hyperparameters]
+epochs: 2500 lr: 0.001 
+hidden_size: 16 time_steps: 60 loss function: 1
 """
