@@ -40,7 +40,7 @@ else:
 
 l_rate = 0.001
 hidden_size = 16
-time_steps = 60
+time_steps = 9*60
 epochs = 2500
 patience = 10
 agent_type = 'strong'
@@ -357,10 +357,14 @@ if __name__ == '__main__':
 
 
 """
+Strong baseline 0.506
+
 ====== RESULT ======
 Used Historical traces: Baseline Agent
 [total reward]: 0.532
 [Hyperparameters]
 epochs: 2500 lr: 0.001 
 hidden_size: 16 time_steps: 60 loss function: 1
+
+improvement 0.532 - 0.506 = 0.026 = 5.1%
 """
