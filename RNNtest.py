@@ -10,7 +10,8 @@ from torch import nn
 from torch.optim import Adam
 import csv
 import matplotlib.pyplot as plt
-from sklearn.utils import resample
+from random import shuffle
+
 
 class LogCoshLoss(nn.Module):
     def __init__(self):
@@ -38,10 +39,10 @@ else:
 
 l_rate = 0.001
 hidden_size = 16
-time_steps = [60]
+time_steps = 60
 epochs = 2500
 patience = 10
-agent_type = 'simple'
+agent_type = 'strong'
 
 best_val_loss = float('inf')
 epochs_without_improvement = 0
@@ -160,65 +161,18 @@ def imv(state):
     return imputed_state
 
 
-def verify_labels(train_data, train_labels, balanced_train_data, balanced_train_labels):
-    # Label Consistency
-    # print("First instance before balancing: ", train_data[0], "Label: ", train_labels[0])
-    # print("First instance after balancing: ", balanced_train_data[0], "Label: ", balanced_train_labels[0])
+def undersample(X, Y):
+    X_undersampled, Y_undersampled = [], []
+    for i in range(len(X)):
+        if i % 2 == 0:
+            X_undersampled.append(X[i])
+            Y_undersampled.append(Y[i])
 
-    # Label Distribution
-    print("Label distribution before balancing: ", get_class_distribution(train_labels))
-    print("Label distribution after balancing: ", get_class_distribution(balanced_train_labels))
-
-    # Number of Labels
-    print("Number of instances and labels before balancing: ", len(train_data), len(train_labels))
-    print("Number of instances and labels after balancing: ", len(balanced_train_data), len(balanced_train_labels))
-
-    # Unique Labels
-    print("Unique labels before balancing: ", np.unique(train_labels))
-    print("Unique labels after balancing: ", np.unique(balanced_train_labels))
-
-
-def get_class_distribution(labels):
-    labels_argmax = np.argmax(labels, axis=1)
-    hist, bin_edges = np.histogram(labels_argmax, bins=range(labels_argmax.max()+2))
-    return hist
-
-def balance_classes(train_data, train_labels):
-    classes = np.unique(train_labels)
-    balanced_train_data = []
-    balanced_train_labels = []
-    # Get the distribution of classes
-    class_distribution = get_class_distribution(train_labels)
-
-    # Set the target number of samples to be the maximum count among all classes
-    max_samples = np.max(class_distribution)
-
-    for cls in classes:
-        class_idx = np.where(train_labels == cls)[0]
-        class_data = train_data[class_idx]
-        class_labels = train_labels[class_idx]
-
-        if len(class_data) > max_samples:
-            class_data, class_labels = resample(class_data, class_labels,
-                                                replace=False,
-                                                n_samples=max_samples,
-                                                random_state=42)
-
-        balanced_train_data.append(class_data)
-        balanced_train_labels.append(class_labels)
-
-    balanced_train_data, balanced_train_labels = np.concatenate(balanced_train_data), np.concatenate(balanced_train_labels)
-
-    print("Distribution of classes after balancing:", get_class_distribution(balanced_train_labels))
-
-    # Shuffle data
-    shuffle_indices = np.random.permutation(len(balanced_train_data))
-    balanced_train_data = balanced_train_data[shuffle_indices]
-    balanced_train_labels = balanced_train_labels[shuffle_indices]
-
-    verify_labels(train_data, train_labels, balanced_train_data, balanced_train_labels)
-
-    return balanced_train_data, balanced_train_labels
+    # shuffle
+    c = list(zip(X_undersampled, Y_undersampled))
+    shuffle(c)
+    X_undersampled, Y_undersampled = zip(*c)
+    return np.array(X_undersampled), np.array(Y_undersampled)
 
 
 if __name__ == '__main__':
@@ -251,155 +205,158 @@ if __name__ == '__main__':
     lstm_agent = LSTM_Agent(input_size, hidden_size, output_size).to(device)
     optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
 
-    for ts in time_steps:
-        # Use the function on your data
-        trainX, trainY = get_XY(train_data, ts)
-        trainX, trainY = balance_classes(trainX, trainY)
 
-        testX, testY = get_XY(test_data, ts)
-        trainX = torch.tensor(trainX, dtype=torch.float32).to(device)
-        trainY = torch.tensor(trainY, dtype=torch.float32).to(device)
-        testX = torch.tensor(testX, dtype=torch.float32).to(device)
-        testY = torch.tensor(testY, dtype=torch.float32).to(device)
+    # # Use the function on your data
+    trainX, trainY = get_XY(train_data, time_steps)
+    testX, testY = get_XY(test_data, time_steps)
 
-        # Training loop
-        print('Training LSTM Agent')
-        for epoch in range(epochs):
-            hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
-                batch_size=trainX.size(0))
-            hidden_state = hidden_state.to(device)
-            cell_state = cell_state.to(device)
-            optimizer.zero_grad()
-            outputs, (hidden_state, cell_state) = lstm_agent(trainX, (
-            hidden_state, cell_state))
-            loss = criterion(outputs, trainY)
-            loss.backward()
-
-            optimizer.step()
-
-            # Validation
-            val_outputs, (_, _) = lstm_agent(testX,
-                                             lstm_agent.init_hidden_cell_states(
-                                                 batch_size=testX.size(0)))
-            hidden_state = hidden_state.to(device)
-            cell_state = cell_state.to(device)
-            val_loss = criterion(val_outputs, testY)
-            validation_losses.append(round(val_loss.item(), 3))  # Append the reward at each timestep
-            training_losses.append(round(loss.item(), 3))  # Append the reward at each timestep
-
-            # Early stopping
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                epochs_without_improvement = 0
-                best_epoch = epoch
-            else:
-                epochs_without_improvement += 1
+    trainX, trainY = undersample(trainX, trainY)
 
 
-            print(
-                f'Epoch: {epoch + 1}, Training Loss: {round(loss.item(), 3)}, Validation Loss: {round(val_loss.item(), 3)}')
 
-            if epochs_without_improvement >= patience:
-                print("Early stopping")
-                break
+    trainX = torch.tensor(trainX, dtype=torch.float32).to(device)
+    trainY = torch.tensor(trainY, dtype=torch.float32).to(device)
+    testX = torch.tensor(testX, dtype=torch.float32).to(device)
+    testY = torch.tensor(testY, dtype=torch.float32).to(device)
 
-        print('Testing LSTM Agent')
-        env.reset(mode='test')
-        # give random scores as the initial action
-        init_action = np.random.rand(env.n_camera)
-        reward, state, stop = env.step(init_action)
-
-        # Initialize the hidden and cell states for the LSTM agent
+    # Training loop
+    print('Training LSTM Agent')
+    for epoch in range(epochs):
         hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
-            batch_size=1)
+            batch_size=trainX.size(0))
         hidden_state = hidden_state.to(device)
         cell_state = cell_state.to(device)
+        optimizer.zero_grad()
+        outputs, (hidden_state, cell_state) = lstm_agent(trainX, (
+        hidden_state, cell_state))
+        loss = criterion(outputs, trainY)
+        loss.backward()
 
-        inference_times = []
+        optimizer.step()
 
-        reward_on_time = []
-        for t in tqdm(range(env.length), initial=2):
-            # Prepare the input state for the LSTM agent
-            # print(state)
-            input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(
-                0).unsqueeze(0).to(
-                device)  # Add the batch and sequence dimensions
+        # Validation
+        val_outputs, (_, _) = lstm_agent(testX,
+                                         lstm_agent.init_hidden_cell_states(
+                                             batch_size=testX.size(0)))
+        hidden_state = hidden_state.to(device)
+        cell_state = cell_state.to(device)
+        val_loss = criterion(val_outputs, testY)
+        validation_losses.append(round(val_loss.item(), 3))  # Append the reward at each timestep
+        training_losses.append(round(loss.item(), 3))  # Append the reward at each timestep
 
-            # Measure inference time
-            start_time = time.time()
-
-            # Get the action from the LSTM agent, passing the hidden and cell states
-            action, (hidden_state, cell_state) = lstm_agent(input_state, (
-            hidden_state, cell_state))
-
-            end_time = time.time()
-
-            # Calculate and append inference time
-            inference_time = (end_time - start_time) * 1000  # convert to ms
-            inference_times.append(inference_time)
-
-            action = action.squeeze().detach().cpu().numpy()
-
-            # Perform the action in the environment
-            reward, state, stop = env.step(action)
-            reward_on_time.append(reward)
-            state = impute_missing_values([state])[0]
+        # Early stopping
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            epochs_without_improvement = 0
+            best_epoch = epoch
+        else:
+            epochs_without_improvement += 1
 
 
-            if stop:
-                break
-
-        average_inference_time = statistics.mean(inference_times)
-
-        print(f'====== RESULT ======')
-        if inp2 == 1:
-            print("Used Historical traces: Baseline Agent")
-        if inp2 == 2:
-            print("Used Historical traces: D-UCB Agent")
-        if inp2 == 3:
-            print("Used Historical traces: SW-UCB Agent")
-        if inp2 == 4:
-            print("Used Historical traces: UCB-1 Agent")
-
-        print('[total reward]:', env.get_total_reward())
-        print('[Hyperparameters]')
         print(
-            "epochs: {} lr: {} \nhidden_size: {} time_steps: {} loss function: {}".format(
-                epochs, l_rate, hidden_size, ts, inp1))
+            f'Epoch: {epoch + 1}, Training Loss: {round(loss.item(), 3)}, Validation Loss: {round(val_loss.item(), 3)}')
 
-        total_reward = env.get_total_reward()
+        if epochs_without_improvement >= patience:
+            print("Early stopping")
+            break
 
-        # used historical trace, total reward, epochs, l_rate, hidden_size, amount of timesteps, 1: MSE, 2: MAE, 3: Huber
-        result.append(
-            [inp2, total_reward, best_epoch, epochs, l_rate, hidden_size, ts,
-             inp1, average_inference_time])
+    print('Testing LSTM Agent')
+    env.reset(mode='test')
+    # give random scores as the initial action
+    init_action = np.random.rand(env.n_camera)
+    reward, state, stop = env.step(init_action)
 
-        with open('results.csv', mode='a', newline='') as file:
-            writer = csv.writer(file)
-            for row in result:
-                writer.writerow(row)
+    # Initialize the hidden and cell states for the LSTM agent
+    hidden_state, cell_state = lstm_agent.init_hidden_cell_states(
+        batch_size=1)
+    hidden_state = hidden_state.to(device)
+    cell_state = cell_state.to(device)
 
-        # Plot the validation and training losses
-        plt.plot(range(len(validation_losses)), validation_losses)
-        plt.plot(range(len(training_losses)), training_losses)
-        plt.legend(['Validation Loss', 'Training Loss'])
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.title('Validation and Training Losses')
+    inference_times = []
 
-        plt.savefig('losses.png')
-        #plt.show()
+    reward_on_time = []
+    for t in tqdm(range(env.length), initial=2):
+        # Prepare the input state for the LSTM agent
+        # print(state)
+        input_state = torch.tensor(state, dtype=torch.float32).unsqueeze(
+            0).unsqueeze(0).to(
+            device)  # Add the batch and sequence dimensions
+
+        # Measure inference time
+        start_time = time.time()
+
+        # Get the action from the LSTM agent, passing the hidden and cell states
+        action, (hidden_state, cell_state) = lstm_agent(input_state, (
+        hidden_state, cell_state))
+
+        end_time = time.time()
+
+        # Calculate and append inference time
+        inference_time = (end_time - start_time) * 1000  # convert to ms
+        inference_times.append(inference_time)
+
+        action = action.squeeze().detach().cpu().numpy()
+
+        # Perform the action in the environment
+        reward, state, stop = env.step(action)
+        reward_on_time.append(reward)
+        state = impute_missing_values([state])[0]
 
 
-        # plot the reward on time
-        plt.plot(range(len(reward_on_time)), reward_on_time)
+        if stop:
+            break
 
-        plt.xlabel('Time')
-        plt.ylabel('Reward')
-        plt.title(f'Reward on time of agent: {inp2} with total reward: {total_reward}')
+    average_inference_time = statistics.mean(inference_times)
 
-        plt.savefig('reward_on_time.png')
-        plt.show()
+    print(f'====== RESULT ======')
+    if inp2 == 1:
+        print("Used Historical traces: Baseline Agent")
+    if inp2 == 2:
+        print("Used Historical traces: D-UCB Agent")
+    if inp2 == 3:
+        print("Used Historical traces: SW-UCB Agent")
+    if inp2 == 4:
+        print("Used Historical traces: UCB-1 Agent")
+
+    print('[total reward]:', env.get_total_reward())
+    print('[Hyperparameters]')
+    print(
+        "epochs: {} lr: {} \nhidden_size: {} time_steps: {} loss function: {}".format(
+            epochs, l_rate, hidden_size, time_steps, inp1))
+
+    total_reward = env.get_total_reward()
+
+    # used historical trace, total reward, epochs, l_rate, hidden_size, amount of timesteps, 1: MSE, 2: MAE, 3: Huber
+    result.append(
+        [inp2, total_reward, best_epoch, epochs, l_rate, hidden_size, time_steps,
+         inp1, average_inference_time])
+
+    with open('results.csv', mode='a', newline='') as file:
+        writer = csv.writer(file)
+        for row in result:
+            writer.writerow(row)
+
+    # Plot the validation and training losses
+    plt.plot(range(len(validation_losses)), validation_losses)
+    plt.plot(range(len(training_losses)), training_losses)
+    plt.legend(['Validation Loss', 'Training Loss'])
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Validation and Training Losses')
+
+    plt.savefig('losses.png')
+    #plt.show()
+
+
+    # plot the reward on time
+    plt.plot(range(len(reward_on_time)), reward_on_time)
+
+    plt.xlabel('Time')
+    plt.ylabel('Reward')
+    plt.title(f'Reward on time of agent: {inp2} with total reward: {total_reward}')
+
+    plt.savefig('reward_on_time.png')
+    plt.show()
 
 
 

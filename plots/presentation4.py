@@ -14,8 +14,8 @@ def discounted_ucb_approach(data, discount_factor=0.9):
     return ucb_values
 
 # Example data (replace with your own data)
-timesteps = np.arange(0, 24 * 4, 1)
-days = 4
+timesteps = np.arange(0, 24 * 1, 1)
+days = 1
 
 # Repeat the people_count data for 4 days
 people_count = np.array([0, 0, 3, 0, 10, 5, 10, 20, 50, 100, 400, 300, 500, 600, 500, 300, 200, 500, 0, 0, 3, 0, 4, 0])
@@ -25,7 +25,7 @@ mean_line = mean_approach(people_count)
 sliding_window_line = sliding_window_approach(people_count, window_size=5)
 discounted_ucb_line = discounted_ucb_approach(people_count, discount_factor=0.9)
 
-fig, axs = plt.subplots(2, 1, figsize=(15, 9), sharex=True)
+fig, axs = plt.subplots(1, 2, figsize=(15, 9), sharey=True)
 
 axs[0].plot(timesteps, people_count, marker='o', linewidth=2, label='Original Data')
 axs[0].plot(timesteps, mean_line * np.ones_like(timesteps), linewidth=2, label='Mean Approach')
@@ -38,10 +38,10 @@ axs[0].grid(True)
 axs[1].plot(timesteps, people_count, marker='o', linewidth=2, label='Original Data')
 axs[1].plot(timesteps, sliding_window_line, linewidth=2, label='Sliding Window Approach')
 axs[1].set_title("Non-Stationary: Sliding Window Approach (SW-UCB)")
-axs[1].set_ylabel("Number of Faces")
-axs[0].set_xlabel("Time (in hours)")
+axs[1].set_xlabel("Time (in hours)")
 axs[1].legend()
 axs[1].grid(True)
 
-plt.savefig('presentation4.png')
+plt.tight_layout()  # Ensures that labels don't overlap
+plt.savefig('stationary.png')
 plt.show()
