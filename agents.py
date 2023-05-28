@@ -1,5 +1,5 @@
 # agent script for 'Resource Optimization for Facial Recognition Systems (ROFARS)' project
-# author: Cyril Hsu @ UvA-MNS
+# author: Cyril Hsu & Jasper Bruin @ UvA-MNS
 # date: 23/02/2023
 from collections import deque
 import numpy as np
@@ -25,7 +25,19 @@ else:
 print("device: ", device)
 
 class baselineAgent:
+    """
+    A baseline agent class that either selects actions randomly or based on previous states.
 
+    Attributes
+    ----------
+    agent_type : str
+        Type of the agent. Must be either 'simple' (for random action selection) or
+        'strong' (for action selection based on previous states).
+    prev_state : array
+        The previous state observed by the agent.
+    theta : float
+        Parameter for the strong agent to replace -1 values in the previous state.
+    """
     def __init__(self, theta=0, agent_type='strong'):
         assert agent_type in ['simple', 'strong']
         self.agent_type = agent_type
@@ -50,6 +62,14 @@ class baselineAgent:
         return action
 
 class SlidingWindowUCBAgent:
+    """
+    Agent implementing Sliding Window UCB algorithm for action selection.
+
+    Attributes
+    ----------
+    window_size : int
+        The size of the sliding window for recent rewards and counts.
+    """
     def __init__(self, window_size=1000):
         self.counts = None
         self.values = None
@@ -103,6 +123,14 @@ class SlidingWindowUCBAgent:
 
 
 class DiscountedUCBAgent:
+    """
+    Agent implementing Discounted UCB algorithm for action selection.
+
+    Attributes
+    ----------
+    gamma : float
+        Discount factor for past rewards and counts.
+    """
     def __init__(self, gamma=0.9):
         self.counts = None
         self.discounted_counts = None
@@ -148,6 +176,13 @@ class DiscountedUCBAgent:
 
 
 class UCBAgent:
+    """
+    Agent implementing UCB1 algorithm for action selection.
+
+    Attributes
+    ----------
+    None
+    """
     def __init__(self):
         self.counts = None
         self.values = None
@@ -179,6 +214,18 @@ class UCBAgent:
                 self.counts[i] += 0
 
 class LSTM_Agent(nn.Module):
+    """
+    LSTM Agent is a type of agent which makes use of a LSTM network for action selection.
+
+    Attributes
+    ----------
+    input_size : int
+        The number of expected features in the input.
+    hidden_size : int
+        The number of features in the hidden state of LSTM.
+    output_size : int
+        The number of expected features in the output.
+    """
     def __init__(self, input_size, hidden_size, output_size):
         super(LSTM_Agent, self).__init__()
         self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)

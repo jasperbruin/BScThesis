@@ -1,10 +1,9 @@
 import statistics
 import time
 import numpy as np
-import pandas as pd
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
-from agents import baselineAgent, LSTM_Agent, DiscountedUCBAgent, SlidingWindowUCBAgent, UCBAgent
+from agents import LSTM_Agent
 import torch
 from torch import nn
 from torch.optim import Adam
@@ -12,16 +11,6 @@ import csv
 import matplotlib.pyplot as plt
 from random import shuffle
 from sklearn.utils import resample
-
-
-class LogCoshLoss(nn.Module):
-    def __init__(self):
-        super(LogCoshLoss, self).__init__()
-
-    def forward(self, true, pred):
-        loss = torch.log(torch.cosh(pred - true))
-        return torch.mean(loss)
-
 
 if not torch.backends.mps.is_available():
     if not torch.backends.mps.is_built():
@@ -36,8 +25,6 @@ else:
     device = torch.device("mps")
 
 
-
-
 l_rate = 0.001
 hidden_size = 2
 time_steps = 60
@@ -50,87 +37,11 @@ epochs_without_improvement = 0
 result = []
 training_losses = []
 validation_losses = []
-
-def create_training_traces(env, mode, inp):
-    # Training
-    env.reset(mode)
-    if inp == 1:
-        baseline_agent = baselineAgent(agent_type=agent_type)
-        states = []
-
-        # Generate training traces from the Baseline agent
-        init_action = np.random.rand(env.n_camera)
-        reward, state, stop = env.step(init_action)
-
-        for t in tqdm(range(env.length), initial=2):
-            action = baseline_agent.get_action(state)
-            reward, state, stop = env.step(action)
-
-            states.append(state)
-
-            if stop:
-                break
-
-        return states
-
-    elif inp == 2:
-        states = []
-        agent = DiscountedUCBAgent(gamma=0.999)
-        agent.initialize(env.n_camera)
-
-        for t in tqdm(range(env.length), initial=2):
-            action = agent.get_action()
-            reward, state, stop = env.step(action)
-
-            # Update the UCB Agent
-            agent.update(action, state)
-
-            states.append(state)
-
-            if stop:
-                break
-
-        return states
-    elif inp == 3:
-        states = []
-        agent = SlidingWindowUCBAgent(window_size=9*60)
-        agent.initialize(env.n_camera)
-
-        for t in tqdm(range(env.length), initial=2):
-            action = agent.get_action()
-            reward, state, stop = env.step(action)
-
-            # Update the UCB Agent
-            agent.update(action, state)
-
-            states.append(state)
-
-            if stop:
-                break
-
-        return states
-    elif inp == 4:
-        states = []
-        agent = UCBAgent()
-        agent.initialize(env.n_camera)
-
-        for t in tqdm(range(env.length), initial=2):
-            action = agent.get_action()
-            reward, state, stop = env.step(action)
-
-            # Update the UCB Agent
-            agent.update(action, state)
-
-            states.append(state)
-
-            if stop:
-                break
-
-        return states
-
-
 baseline_agent = None
 agent = None
+criterion = nn.MSELoss()
+np.random.seed(0)
+env = ROFARS_v1()
 
 def get_train_test(states, split_percent=0.7):
     n = len(states)
@@ -156,12 +67,6 @@ def impute_missing_values(states):
         imputed_states.append(imputed_state)
     return np.array(imputed_states)
 
-def imv(state):
-    median_value = np.median([v for v in state if v >= 0])
-    imputed_state = np.array([v if v >= 0 else median_value for v in state])
-    return imputed_state
-
-
 def resample_data(X, Y):
     X_resampled, Y_resampled = resample(X, Y, replace=True, n_samples=len(X) // 2, random_state=123)
     c = list(zip(X_resampled, Y_resampled))
@@ -172,33 +77,16 @@ def resample_data(X, Y):
 
 
 if __name__ == '__main__':
-    inp1 = int(input("1. MSE\n2. MAE \n3. Huber\n4. LogCosh\n"))
-    if inp1 == 1:
-        criterion = nn.MSELoss()
-    if inp1 == 2:
-        criterion = nn.L1Loss()
-    if inp1 == 3:
-        criterion = nn.HuberLoss()
-    if inp1 == 4:
-        criterion = LogCoshLoss()
+    inp2 = int(input(
+        "1. Baseline Strong 2. D-UCB Agent: 3. SW-UCB Agent "
+        "4. UCB-1 Agent 5. Baseline Simple\n"))
 
 
-    np.random.seed(0)
 
-    env = ROFARS_v1()
+    train_data = np.loadtxt(f'data/train_data_{inp2}.txt')
+    test_data = np.loadtxt(f'data/test_data_{inp2}.txt')
 
-    input_size = env.n_camera
-    output_size = env.n_camera
-    inp2 = int(input("1. Baseline Agent 2. D-UCB Agent: 3. SW-UCB Agent 4. UCB-1 Agent\n"))
-
-
-    train_data = create_training_traces(env, 'train', inp2)
-    test_data = create_training_traces(env, 'test', inp2)
-
-    train_data = impute_missing_values(train_data)
-    test_data = impute_missing_values(test_data)
-
-    lstm_agent = LSTM_Agent(input_size, hidden_size, output_size).to(device)
+    lstm_agent = LSTM_Agent(env.n_camera, hidden_size, env.n_camera).to(device)
     optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
 
 
@@ -353,25 +241,3 @@ if __name__ == '__main__':
 
     plt.savefig('reward_on_time.png')
     plt.show()
-
-
-
-
-
-"""
-Strong baseline 0.506
-
-====== RESULT ======
-Used Historical traces: Baseline Agent
-[total reward]: 0.534
-[Hyperparameters]
-epochs: 2500 lr: 0.001 
-hidden_size: 16 time_steps: 60 loss function: 1
-
-0.446 - 0.317 = 0.129 = 12.9% improvement
-0.446 - 0.534 = -0.088 = -8.8% improvement
-
-0.495 - 0.317 = 0.178 = 17.8% improvement
-0.495 - 0.534 = -0.039 = -3.9% improvement
-
-"""
