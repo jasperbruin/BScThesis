@@ -32,6 +32,9 @@ class baselineAgent:
         self.prev_state = None
         self.theta = theta
 
+    def initialize(self, n_actions):
+        pass
+
     def get_action(self, state):
         # store previous state
         self.prev_state = state

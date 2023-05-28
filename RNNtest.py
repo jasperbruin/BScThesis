@@ -39,10 +39,10 @@ else:
 
 
 l_rate = 0.001
-hidden_size = 16
-time_steps = 9*60
+hidden_size = 2
+time_steps = 60
 epochs = 2500
-patience = 10
+patience = 5
 agent_type = 'strong'
 
 best_val_loss = float('inf')
@@ -208,7 +208,7 @@ if __name__ == '__main__':
 
     trainX, trainY = resample_data(trainX, trainY)
 
-
+    trainX = np.array(trainX)
 
     trainX = torch.tensor(trainX, dtype=torch.float32).to(device)
     trainY = torch.tensor(trainY, dtype=torch.float32).to(device)
@@ -356,15 +356,22 @@ if __name__ == '__main__':
 
 
 
+
+
 """
 Strong baseline 0.506
 
 ====== RESULT ======
 Used Historical traces: Baseline Agent
-[total reward]: 0.532
+[total reward]: 0.534
 [Hyperparameters]
 epochs: 2500 lr: 0.001 
 hidden_size: 16 time_steps: 60 loss function: 1
 
-improvement 0.532 - 0.506 = 0.026 = 5.1%
+0.446 - 0.317 = 0.129 = 12.9% improvement
+0.446 - 0.534 = -0.088 = -8.8% improvement
+
+0.495 - 0.317 = 0.178 = 17.8% improvement
+0.495 - 0.534 = -0.039 = -3.9% improvement
+
 """

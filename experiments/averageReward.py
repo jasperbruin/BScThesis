@@ -6,7 +6,7 @@ agents = ["Simple Baseline", "Strong Baseline", "SW-UCB", "UCB-1", "D-UCB", "LST
           "LSTM Agent: Simple Baseline", "LSTM Agent: UCB-1", "LSTM Agent: SW-UCB", "LSTM Agent: D-UCB"]
 
 # Corresponding average results
-average_results = [0.317, 0.506, 0.562, 0.499, 0.599, 0.534, 0.333, 0.41, 0.525, 0.512]
+average_results = [0.317, 0.506, 0.562, 0.499, 0.599, 0.534, 0.515, 0.444, 0.446, 0.495]
 
 # Sort agents and average_results by average_results
 sort_index = np.argsort(average_results)[::-1]  # Reverse order
