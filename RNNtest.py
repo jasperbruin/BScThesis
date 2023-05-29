@@ -30,7 +30,6 @@ hidden_size = 2
 time_steps = 60
 epochs = 2500
 patience = 5
-agent_type = 'strong'
 
 best_val_loss = float('inf')
 epochs_without_improvement = 0
@@ -80,7 +79,9 @@ if __name__ == '__main__':
     inp2 = int(input(
         "1. Baseline Strong 2. D-UCB Agent: 3. SW-UCB Agent "
         "4. UCB-1 Agent 5. Baseline Simple\n"))
-
+    if inp2 != [1, 2, 3, 4, 5]:
+        print("Invalid input")
+        exit(0)
 
 
     train_data = np.loadtxt(f'data/train_data_{inp2}.txt')
@@ -97,6 +98,7 @@ if __name__ == '__main__':
     trainX, trainY = resample_data(trainX, trainY)
 
     trainX = np.array(trainX)
+    trainY = np.array(trainY)
 
     trainX = torch.tensor(trainX, dtype=torch.float32).to(device)
     trainY = torch.tensor(trainY, dtype=torch.float32).to(device)
@@ -206,14 +208,13 @@ if __name__ == '__main__':
     print('[Hyperparameters]')
     print(
         "epochs: {} lr: {} \nhidden_size: {} time_steps: {} loss function: {}".format(
-            epochs, l_rate, hidden_size, time_steps, inp1))
+            epochs, l_rate, hidden_size, time_steps))
 
     total_reward = env.get_total_reward()
 
     # used historical trace, total reward, epochs, l_rate, hidden_size, amount of timesteps, 1: MSE, 2: MAE, 3: Huber
     result.append(
-        [inp2, total_reward, best_epoch, epochs, l_rate, hidden_size, time_steps,
-         inp1, average_inference_time])
+        [inp2, total_reward, best_epoch, epochs, l_rate, hidden_size, time_steps, average_inference_time])
 
     with open('results.csv', mode='a', newline='') as file:
         writer = csv.writer(file)
