@@ -8,30 +8,29 @@ import torch
 from torch import nn
 from torch.optim import Adam
 import csv
-import matplotlib.pyplot as plt
 from random import shuffle
 from sklearn.utils import resample
+import matplotlib.pyplot as plt
 
 
 if not torch.backends.mps.is_available():
-    if not torch.backends.mps.is_built():
-        print("MPS not available because the current PyTorch install was not "
-              "built with MPS enabled.")
-    else:
-        print("MPS not available because the current MacOS version is not 12.3+"
-              "and/or you do not have an MPS-enabled device on this machine.")
+    reason = "MPS not available because the current PyTorch install was not built with MPS enabled." \
+        if not torch.backends.mps.is_built() \
+        else "MPS not available because the current MacOS version is not 12.3+ and/or you do not have an MPS-enabled device on this machine."
+    print(reason)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 else:
     device = torch.device("mps")
 
 
 
+baseline_agent = None
+agent = None
 
 l_rate = 0.001
 hidden_size = 16
 time_steps = 60
-epochs = 2500
+epochs = 5000
 patience = 10
 
 criterion = nn.MSELoss()
@@ -47,101 +46,38 @@ validation_losses = []
 def create_training_traces(env, mode, inp):
     # Training
     env.reset(mode)
-    if inp == 1:
-        baseline_agent = baselineAgent(agent_type='strong')
-        states = []
+    states = []
 
-        # Generate training traces from the Baseline agent
+    if inp == 1:
+        agent = baselineAgent(agent_type='strong')
         init_action = np.random.rand(env.n_camera)
         reward, state, stop = env.step(init_action)
-
-        for t in tqdm(range(env.length), initial=2):
-            action = baseline_agent.get_action(state)
-            reward, state, stop = env.step(action)
-
-            states.append(state)
-
-            if stop:
-                break
-
-        return states
-
     elif inp == 2:
-        states = []
         agent = DiscountedUCBAgent(gamma=0.999)
         agent.initialize(env.n_camera)
-
-        for t in tqdm(range(env.length), initial=2):
-            action = agent.get_action()
-            reward, state, stop = env.step(action)
-
-            # Update the UCB Agent
-            agent.update(action, state)
-
-            states.append(state)
-
-            if stop:
-                break
-
-        return states
     elif inp == 3:
-        states = []
         agent = SlidingWindowUCBAgent(window_size=9*60)
         agent.initialize(env.n_camera)
-
-        for t in tqdm(range(env.length), initial=2):
-            action = agent.get_action()
-            reward, state, stop = env.step(action)
-
-            # Update the UCB Agent
-            agent.update(action, state)
-
-            states.append(state)
-
-            if stop:
-                break
-
-        return states
     elif inp == 4:
-        states = []
         agent = UCBAgent()
         agent.initialize(env.n_camera)
-
-        for t in tqdm(range(env.length), initial=2):
-            action = agent.get_action()
-            reward, state, stop = env.step(action)
-
-            # Update the UCB Agent
-            agent.update(action, state)
-
-            states.append(state)
-
-            if stop:
-                break
-
-        return states
-    if inp == 5:
-        baseline_agent = baselineAgent(agent_type='simple')
-        states = []
-
-        # Generate training traces from the Baseline agent
+    elif inp == 5:
+        agent = baselineAgent(agent_type='simple')
         init_action = np.random.rand(env.n_camera)
         reward, state, stop = env.step(init_action)
 
-        for t in tqdm(range(env.length), initial=2):
-            action = baseline_agent.get_action(state)
-            reward, state, stop = env.step(action)
+    for t in tqdm(range(env.length), initial=2):
+        action = agent.get_action(state) if inp in [1, 5] else agent.get_action()
+        reward, state, stop = env.step(action)
 
-            states.append(state)
+        if inp in [2, 3, 4]:  # UCB agents
+            agent.update(action, state)
+        states.append(state)
 
-            if stop:
-                break
+        if stop:
+            break
 
-        return states
-
-
-baseline_agent = None
-agent = None
+    return states
 
 def get_train_test(states, split_percent=0.7):
     n = len(states)
@@ -158,19 +94,34 @@ def get_XY(states, time_steps=1):
         Y.append(states[i + time_steps])
     return np.array(X), np.array(Y)
 
-def impute_missing_values(states):
-    # median impuation
+def impute_missing_values(states, style):
     imputed_states = []
-    for state in states:
-        median_values = np.median([v for v in state if v >= 0])
-        imputed_state = np.array([v if v >= 0 else median_values for v in state])
-        imputed_states.append(imputed_state)
-    return np.array(imputed_states)
+    if style == 1:
+        for state in states:
+            median_values = np.median([v for v in state if v >= 0])
+            imputed_state = np.array([v if v >= 0 else median_values for v in state])
+            imputed_states.append(imputed_state)
+        return np.array(imputed_states)
+    else:
+        for state in states:
+            mask = state >= 0
+            x = np.where(mask)[0]
+            y = state[mask]
+            imputed_state = np.interp(np.arange(len(state)), x, y)
+            imputed_states.append(imputed_state)
+        return np.array(imputed_states)
 
-def imv(state):
-    median_value = np.median([v for v in state if v >= 0])
-    imputed_state = np.array([v if v >= 0 else median_value for v in state])
-    return imputed_state
+def imv(state, style='median'):
+    if style == 1:
+        median_value = np.median([v for v in state if v >= 0])
+        imputed_state = np.array([v if v >= 0 else median_value for v in state])
+        return imputed_state
+    else:
+        mask = state >= 0
+        x = np.where(mask)[0]
+        y = state[mask]
+        imputed_state = np.interp(np.arange(len(state)), x, y)
+        return imputed_state
 
 
 def resample_data(X, Y):
@@ -178,19 +129,19 @@ def resample_data(X, Y):
     c = list(zip(X_resampled, Y_resampled))
     shuffle(c)
     X_resampled, Y_resampled = zip(*c)
-
     return X_resampled, Y_resampled
 
 
 if __name__ == '__main__':
-    inp2 = int(input("1. Baseline Agent 2. D-UCB Agent: 3. SW-UCB Agent 4. UCB-1 Agent\n"))
+    used_agent = int(input("1. Baseline Strong 2. D-UCB Agent: 3. SW-UCB Agent 4. UCB-1 Agent 5.Baseline Simple\n"))
+    imp = int(input("Imputation style: 1. Median 2. Interpolation\n"))
 
 
-    train_data = create_training_traces(env, 'train', inp2)
-    test_data = create_training_traces(env, 'test', inp2)
+    train_data = create_training_traces(env, 'train', used_agent)
+    test_data = create_training_traces(env, 'test', used_agent)
 
-    train_data = impute_missing_values(train_data)
-    test_data = impute_missing_values(test_data)
+    train_data = impute_missing_values(train_data, style=imp)
+    test_data = impute_missing_values(test_data, style=imp)
 
     lstm_agent = LSTM_Agent(env.n_camera, hidden_size, env.n_camera).to(device)
     optimizer = Adam(lstm_agent.parameters(), lr=l_rate)
@@ -198,7 +149,7 @@ if __name__ == '__main__':
     trainX, trainY = get_XY(train_data, time_steps)
     testX, testY = get_XY(test_data, time_steps)
     trainX, trainY = resample_data(trainX, trainY)
-    
+
     # convert to np array
     trainX = np.array(trainX)
     trainY = np.array(trainY)
@@ -232,8 +183,8 @@ if __name__ == '__main__':
         hidden_state = hidden_state.to(device)
         cell_state = cell_state.to(device)
         val_loss = criterion(val_outputs, testY)
-        validation_losses.append(round(val_loss.item(), 3))  # Append the reward at each timestep
-        training_losses.append(round(loss.item(), 3))  # Append the reward at each timestep
+        validation_losses.append(round(val_loss.item(), 3))
+        training_losses.append(round(loss.item(), 3))
 
         # Early stopping
         if val_loss < best_val_loss:
@@ -291,7 +242,7 @@ if __name__ == '__main__':
         # Perform the action in the environment
         reward, state, stop = env.step(action)
         reward_on_time.append(reward)
-        state = impute_missing_values([state])[0]
+        state = impute_missing_values([state], imp)[0]
 
 
         if stop:
@@ -300,28 +251,26 @@ if __name__ == '__main__':
     average_inference_time = statistics.mean(inference_times)
 
     print(f'====== RESULT ======')
-    if inp2 == 1:
+    if used_agent == 1:
         print("Used Historical traces: Baseline Strong")
-    if inp2 == 2:
+    if used_agent == 2:
         print("Used Historical traces: D-UCB Agent")
-    if inp2 == 3:
+    if used_agent == 3:
         print("Used Historical traces: SW-UCB Agent")
-    if inp2 == 4:
+    if used_agent == 4:
         print("Used Historical traces: UCB-1 Agent")
-    if inp2 == 5:
+    if used_agent == 5:
         print("Used Historical traces: Baseline Weak")
 
     print('[total reward]:', env.get_total_reward())
     print('[Hyperparameters]')
     print(
-        "epochs: {} lr: {} \nhidden_size: {} time_steps: {} loss function: {}".format(
+        "epochs: {} l_rate: {} \nhidden_size: {} time_steps: {}".format(
             epochs, l_rate, hidden_size, time_steps))
 
     total_reward = env.get_total_reward()
-
-    # used historical trace, total reward, epochs, l_rate, hidden_size, amount of timesteps, 1: MSE, 2: MAE, 3: Huber
     result.append(
-        [inp2, total_reward, best_epoch, epochs, l_rate, hidden_size, time_steps, average_inference_time])
+        [used_agent, total_reward, best_epoch, epochs, l_rate, hidden_size, time_steps, average_inference_time])
 
     with open('results.csv', mode='a', newline='') as file:
         writer = csv.writer(file)
@@ -337,30 +286,4 @@ if __name__ == '__main__':
     plt.title('Validation and Training Losses')
 
     plt.savefig('losses.png')
-    #plt.show()
-
-
-    # plot the reward on time
-    plt.plot(range(len(reward_on_time)), reward_on_time)
-
-    plt.xlabel('Time')
-    plt.ylabel('Reward')
-    plt.title(f'Reward on time of agent: {inp2} with total reward: {total_reward}')
-
-    plt.savefig('reward_on_time.png')
     plt.show()
-
-
-
-"""
-Strong baseline 0.506
-
-====== RESULT ======
-Used Historical traces: Baseline Agent
-[total reward]: 0.532
-[Hyperparameters]
-epochs: 2500 lr: 0.001 
-hidden_size: 16 time_steps: 60 loss function: 1
-
-improvement 0.532 - 0.506 = 0.026 = 5.1%
-"""
