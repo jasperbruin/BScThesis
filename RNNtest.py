@@ -97,12 +97,14 @@ def get_XY(states, time_steps=1):
 def impute_missing_values(states, style):
     imputed_states = []
     if style == 1:
+        # median imputation
         for state in states:
             median_values = np.median([v for v in state if v >= 0])
             imputed_state = np.array([v if v >= 0 else median_values for v in state])
             imputed_states.append(imputed_state)
         return np.array(imputed_states)
     else:
+        # linear interpolation
         for state in states:
             mask = state >= 0
             x = np.where(mask)[0]
@@ -111,12 +113,14 @@ def impute_missing_values(states, style):
             imputed_states.append(imputed_state)
         return np.array(imputed_states)
 
-def imv(state, style='median'):
+def imv(state, style):
     if style == 1:
+        # median imputation
         median_value = np.median([v for v in state if v >= 0])
         imputed_state = np.array([v if v >= 0 else median_value for v in state])
         return imputed_state
     else:
+        # linear interpolation
         mask = state >= 0
         x = np.where(mask)[0]
         y = state[mask]
@@ -250,7 +254,7 @@ if __name__ == '__main__':
 
     average_inference_time = statistics.mean(inference_times)
 
-    print(f'====== RESULT ======')
+    print(f'\n====== RESULT ======')
     if used_agent == 1:
         print("Used Historical traces: Baseline Strong")
     if used_agent == 2:
