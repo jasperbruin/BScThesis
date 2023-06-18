@@ -47,6 +47,7 @@ python example.py
 ## Contact
 Cyril Hsu - s.h.hsu@uva.nl
 Dr. Chrysa Papagianni - c.papagianni@uva.nl
+Jasper Bruin - jasperbruin@me.com
 
 ## License 
 
