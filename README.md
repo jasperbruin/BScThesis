@@ -53,6 +53,8 @@ Jasper Bruin - jasperbruin@me.com
 
 ## License 
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 GNU GENERAL PUBLIC LICENSE  
 Version 3, 29 June 2007
 
