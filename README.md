@@ -1,5 +1,6 @@
-[University of Amsterdam](https://www.uva.nl/en)
-[MNS-Research](https://mns-research.nl)
+[<img width="256" src="https://www.seekpng.com/png/full/205-2051271_university-of-amsterdam-logo-university-of-amsterdam-logo.png" />](https://www.uva.nl/en)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+[![](https://mns-research.nl/images/logo_hua931301caa9e2c039e68fbb874deb22a_17897_0x70_resize_lanczos_2.png)](https://mns-research.nl)
 
 # ROFARS-MNS
 Resource Optimization for Facial Recognition Systems
