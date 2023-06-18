@@ -1,6 +1,0 @@
-budget_ratios,rewards_ucb1,rewards_sw_ucb,rewards_d_ucb,rewards_simple_baseline,rewards_strong_baseline
-0.1,0.039,0.044,0.049,0.073,0.062
-0.3,0.153,0.17,0.224,0.231,0.171
-0.5,0.324,0.33,0.329,0.286,0.309
-0.7,0.433,0.433,0.436,0.418,0.483
-0.9,0.563,0.558,0.575,0.568,0.607
