@@ -1,7 +1,5 @@
 import statistics
 import time
-from collections import Counter
-
 import numpy as np
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1

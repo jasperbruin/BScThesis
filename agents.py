@@ -5,7 +5,6 @@ from collections import deque
 import numpy as np
 import torch
 import torch.nn as nn
-#from torch.utils.checkpoint import checkpoint
 
 # Function to set the device to CUDA if available
 # Check that MPS is available
@@ -22,7 +21,6 @@ if not torch.backends.mps.is_available():
 else:
     device = torch.device("mps")
 
-print("device: ", device)
 
 class baselineAgent:
     """
