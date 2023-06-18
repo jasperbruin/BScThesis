@@ -1,5 +1,7 @@
 import statistics
 import time
+from collections import Counter
+
 import numpy as np
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
@@ -72,6 +74,7 @@ def create_training_traces(env, mode, inp):
 
         if inp in [2, 3, 4]:  # UCB agents
             agent.update(action, state)
+
         states.append(state)
 
         if stop:
@@ -94,6 +97,8 @@ def get_XY(states, time_steps=1):
         Y.append(states[i + time_steps])
     return np.array(X), np.array(Y)
 
+import numpy as np
+
 def impute_missing_values(states, style):
     imputed_states = []
     if style == 1:
@@ -102,8 +107,14 @@ def impute_missing_values(states, style):
             median_values = np.median([v for v in state if v >= 0])
             imputed_state = np.array([v if v >= 0 else median_values for v in state])
             imputed_states.append(imputed_state)
-        return np.array(imputed_states)
-    else:
+    elif style == 2:
+        # median imputation
+        for state in states:
+            median_values = np.mean([v for v in state if v >= 0])
+            imputed_state = np.array(
+                [v if v >= 0 else median_values for v in state])
+            imputed_states.append(imputed_state)
+    elif style == 3:
         # linear interpolation
         for state in states:
             mask = state >= 0
@@ -111,21 +122,46 @@ def impute_missing_values(states, style):
             y = state[mask]
             imputed_state = np.interp(np.arange(len(state)), x, y)
             imputed_states.append(imputed_state)
-        return np.array(imputed_states)
+    else:
+        # nearest neighbor interpolation
+        for state in states:
+            mask = state >= 0
+            imputed_state = state.copy()
+            missing_indexes = np.where(~mask)[0]
+            non_missing_indexes = np.where(mask)[0]
+            for idx in missing_indexes:
+                nearest_idx = non_missing_indexes[np.abs(non_missing_indexes - idx).argmin()]
+                imputed_state[idx] = state[nearest_idx]
+            imputed_states.append(imputed_state)
+    return np.array(imputed_states)
 
 def imv(state, style):
     if style == 1:
         # median imputation
         median_value = np.median([v for v in state if v >= 0])
         imputed_state = np.array([v if v >= 0 else median_value for v in state])
-        return imputed_state
-    else:
+    elif style == 2:
+        # mean imputation
+        median_value = np.mean([v for v in state if v >= 0])
+        imputed_state = np.array(
+            [v if v >= 0 else median_value for v in state])
+    elif style == 3:
         # linear interpolation
         mask = state >= 0
         x = np.where(mask)[0]
         y = state[mask]
         imputed_state = np.interp(np.arange(len(state)), x, y)
-        return imputed_state
+    else:
+        # nearest neighbor interpolation
+        mask = state >= 0
+        imputed_state = state.copy()
+        missing_indexes = np.where(~mask)[0]
+        non_missing_indexes = np.where(mask)[0]
+        for idx in missing_indexes:
+            nearest_idx = non_missing_indexes[np.abs(non_missing_indexes - idx).argmin()]
+            imputed_state[idx] = state[nearest_idx]
+    return imputed_state
+
 
 
 def resample_data(X, Y):
@@ -138,8 +174,8 @@ def resample_data(X, Y):
 
 if __name__ == '__main__':
     used_agent = int(input("1. Baseline Strong 2. D-UCB Agent: 3. SW-UCB Agent 4. UCB-1 Agent 5.Baseline Simple\n"))
-    imp = int(input("Imputation style: 1. Median 2. Interpolation\n"))
-
+    imp = int(input("Imputation:        (1) Median (2) Mean\n"
+                    "Interpolation:     (3) Linear (4) Nearest Neighbor\n"))
 
     train_data = create_training_traces(env, 'train', used_agent)
     test_data = create_training_traces(env, 'test', used_agent)
@@ -157,7 +193,6 @@ if __name__ == '__main__':
     # convert to np array
     trainX = np.array(trainX)
     trainY = np.array(trainY)
-
 
 
     trainX = torch.tensor(trainX, dtype=torch.float32).to(device)
@@ -276,7 +311,7 @@ if __name__ == '__main__':
     result.append(
         [used_agent, total_reward, best_epoch, epochs, l_rate, hidden_size, time_steps, average_inference_time])
 
-    with open('results.csv', mode='a', newline='') as file:
+    with open('experiments_data/results.csv', mode='a', newline='') as file:
         writer = csv.writer(file)
         for row in result:
             writer.writerow(row)
