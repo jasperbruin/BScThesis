@@ -45,7 +45,7 @@ python example.py
 * Jasper Bruin - Author of the LSTM and UCB agents 
 
 ## Contact
-Cyril Hsu - s.h.hsu@uva.n
+Cyril Hsu - s.h.hsu@uva.nl
 
 Dr. Chrysa Papagianni - c.papagianni@uva.nl
 
