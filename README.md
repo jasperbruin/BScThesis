@@ -1,13 +1,14 @@
-[<img width="256" src="https://www.seekpng.com/png/full/205-2051271_university-of-amsterdam-logo-university-of-amsterdam-logo.png" />](https://www.uva.nl/en)
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-[![](https://mns-research.nl/images/logo_hua931301caa9e2c039e68fbb874deb22a_17897_0x70_resize_lanczos_2.png)](https://mns-research.nl)
+[University of Amsterdam](https://www.uva.nl/en)
+[MNS-Research](https://mns-research.nl)
 
 # ROFARS-MNS
 Resource Optimization for Facial Recognition Systems
 
+This project hosts the LSTM and UCB agent implementations for resource optimization in facial recognition systems, contributed by Jasper Bruin as part of his thesis work on Machine Learning-based resource optimization.
+
 ## Python-based Environment
 * rofarsEnv.py - simulation environment
-* agents.py - implementations for agents
+* agents.py - implementations for agents (LSTM and UCB agents by Jasper Bruin)
 * example.py - example of how everything is put together
 
 ## Dataset
@@ -15,16 +16,13 @@ Resource Optimization for Facial Recognition Systems
 
 ## Dependencies
 * the code supports Python 3.7+
-```
 pip install numpy==1.24.2 pandas==1.5.3 tqdm==4.64.1
-```
 
 ## Usage
 * add your algorithm implementations to agents.py
 * adapt example.py for use of experiments
-```
 python example.py
-```
+
 ## Possible Solutions
 * [Multi-armed bandit problem](https://en.wikipedia.org/wiki/Multi-armed_bandit)
   - [Epsilon-greedy strategy](https://gdmarmerola.github.io/ts-for-bernoulli-bandit)
@@ -32,21 +30,21 @@ python example.py
   - [Upper Confidence Bound (UCB)](https://gdmarmerola.github.io/ts-for-bernoulli-bandit)
   - [Non-stationary bandit](https://gdmarmerola.github.io/non-stationary-bandits)
   
-* [Traffic flow prediction](https://www.sciencedirect.com/science/article/pii/S2210537922000725)</br>
-<img width="400" src="https://ars.els-cdn.com/content/image/1-s2.0-S2210537922000725-gr1_lrg.jpg" />
+* [Traffic flow prediction](https://www.sciencedirect.com/science/article/pii/S2210537922000725)
 
 * [(Deep) reinforcement learning](https://en.wikipedia.org/wiki/Deep_reinforcement_learning)
   - https://spinningup.openai.com/en/latest/
   - https://stable-baselines.readthedocs.io/en/master/
   - https://huggingface.co/deep-rl-course/unit1/rl-framework
 
+## Contributors
+* Jasper Bruin - Author of the LSTM and UCB agents 
+
 ## Contact
-Cyril Hsu - s.h.hsu@uva.nl</br>
+Cyril Hsu - s.h.hsu@uva.nl
 Dr. Chrysa Papagianni - c.papagianni@uva.nl
 
 ## License 
-
-[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 GNU GENERAL PUBLIC LICENSE  
 Version 3, 29 June 2007
