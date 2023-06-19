@@ -15,7 +15,7 @@ Nevertheless, their performance is strongly influenced by the tuning of their ke
 Ths diagram illustrates the progression of data from multiple cameras via the predictive unit, culminating in the facial recognition system.
 
 ## Python-based Environment
-![Diagram illustrating the progression of data from multiple cameras via the predictive unit, culminating at the facial recognition system.](images/agentscheme.png)
+![Diagram illustrating how the agents are connected to the environment and how they interact with statem reward and action](images/agentscheme.png)
 
 
 * rofarsEnv.py - simulation environment
