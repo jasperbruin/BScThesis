@@ -7,10 +7,17 @@ Resource Optimization for Facial Recognition Systems
 
 This project hosts the LSTM and UCB agent implementations for resource optimization in facial recognition systems, contributed by Jasper Bruin as part of his thesis work on Machine Learning-based resource optimization.
 
+## System Diagram
+![Diagram illustrating the progression of data from multiple cameras via the predictive unit, culminating at the facial recognition system.](images/camera.png)
+
+Ths diagram illustrates the progression of data from multiple cameras via the predictive unit, culminating in the facial recognition system.
+
 ## Python-based Environment
 * rofarsEnv.py - simulation environment
 * agents.py - implementations for agents (LSTM and UCB agents by Jasper Bruin)
 * example.py - example of how everything is put together
+* UCBtest.py - testing and training script for the use of different UCB agents.
+* RNNtest.py - testing and training script that uses historical traffic data from existing agents in agents.py
 
 ## Dataset
 * data/train_test.txt (878,858 lines)
