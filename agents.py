@@ -1,25 +1,37 @@
-# agent script for 'Resource Optimization for Facial Recognition Systems (ROFARS)' project
-# author: Cyril Hsu & Jasper Bruin @ UvA-MNS
-# date: 23/02/2023
+"""
+agent script for 'Resource Optimization for Facial Recognition Systems (ROFARS)' project
+author: Cyril Hsu & Jasper Bruin @ UvA-MNS
+date: 23/02/2023
+"""
+
+
 from collections import deque
 import numpy as np
 import torch
 import torch.nn as nn
 
-# Function to set the device to CUDA if available
-# Check that MPS is available
-if not torch.backends.mps.is_available():
-    if not torch.backends.mps.is_built():
-        print("MPS not available because the current PyTorch install was not "
-              "built with MPS enabled.")
+
+def select_device():
+    """
+    Set the device to MPS if available, else to CUDA if available, else CPU.
+
+    Returns:
+        torch.device : The selected device.
+    """
+    if not torch.backends.mps.is_available():
+        if not torch.backends.mps.is_built():
+            print(
+                "MPS not available because the current PyTorch install was not built with MPS enabled.")
+        else:
+            print(
+                "MPS not available because the current MacOS version is not 12.3+ or there is no MPS-enabled device.")
+
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
     else:
-        print("MPS not available because the current MacOS version is not 12.3+ "
-              "and/or you do not have an MPS-enabled device on this machine.")
+        return torch.device("mps")
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-else:
-    device = torch.device("mps")
+device = select_device()
 
 
 class baselineAgent:
