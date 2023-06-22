@@ -1,6 +1,8 @@
-# main script for 'Resource Optimization for Facial Recognition Systems (ROFARS)' project
-# author: Cyril Hsu @ UvA-MNS
-# date: 23/02/2023
+"""
+main script for 'Resource Optimization for Facial Recognition Systems (ROFARS)' project
+author: Cyril Hsu @ UvA-MNS
+date: 23/02/2023
+"""
 
 import numpy as np
 from tqdm import tqdm

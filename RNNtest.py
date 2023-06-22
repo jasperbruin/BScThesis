@@ -1,3 +1,9 @@
+"""
+RNNtest script for 'Resource Optimization for Facial Recognition Systems (ROFARS)' project
+author: Jasper Bruin @ UvA-MNS
+date: 23/02/2023
+"""
+
 import statistics
 import time
 import numpy as np

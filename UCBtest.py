@@ -1,8 +1,10 @@
-import csv
-
+"""
+RNNtest script for 'Resource Optimization for Facial Recognition Systems (ROFARS)' project
+author: Jasper Bruin @ UvA-MNS
+date: 23/02/2023
+"""
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
 from tqdm import tqdm
 from rofarsEnv import ROFARS_v1
 from agents import SlidingWindowUCBAgent, UCBAgent, DiscountedUCBAgent, baselineAgent
@@ -370,8 +372,6 @@ def robustness_test(agent_type, budget_ratios):
 
                 action = agent.get_action(state)
                 reward, state, stop = env.step(action)
-
-
                 # do sth to update your algorithm here
 
                 if stop:
