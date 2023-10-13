@@ -46,14 +46,14 @@ The code is compatible with Python 3.7+. To set up the required environment:
 
 
 ### Potential Approaches & Solutions
-
+<img width="400" src="https://ars.els-cdn.com/content/image/1-s2.0-S2210537922000725-gr1_lrg.jpg" alt="Traffic Flow Prediction">
 - **Multi-armed Bandit Problem**:
     
     - [Epsilon-greedy strategy](https://gdmarmerola.github.io/ts-for-bernoulli-bandit)
     - [Thompson sampling](https://gdmarmerola.github.io/ts-for-bernoulli-bandit)
     - [Upper Confidence Bound (UCB)](https://gdmarmerola.github.io/ts-for-bernoulli-bandit)
     - [Non-stationary bandit](https://gdmarmerola.github.io/non-stationary-bandits)
-- **Traffic Flow Prediction**: [Research Article](https://www.sciencedirect.com/science/article/pii/S2210537922000725) <img width="400" src="https://ars.els-cdn.com/content/image/1-s2.0-S2210537922000725-gr1_lrg.jpg" alt="Traffic Flow Prediction">
+- **Traffic Flow Prediction**: [Research Article](https://www.sciencedirect.com/science/article/pii/S2210537922000725) 
     
 - **(Deep) Reinforcement Learning**:
     
