@@ -45,20 +45,20 @@ The code is compatible with Python 3.7+. To set up the required environment:
 3. Run `python example.py`
 
 
-### Potential Approaches & Solutions
-<img width="400" src="https://ars.els-cdn.com/content/image/1-s2.0-S2210537922000725-gr1_lrg.jpg" alt="Traffic Flow Prediction">
-- **Multi-armed Bandit Problem**:
-    - [Epsilon-greedy strategy](https://gdmarmerola.github.io/ts-for-bernoulli-bandit)
-    - [Thompson sampling](https://gdmarmerola.github.io/ts-for-bernoulli-bandit)
-    - [Upper Confidence Bound (UCB)](https://gdmarmerola.github.io/ts-for-bernoulli-bandit)
-    - [Non-stationary bandit](https://gdmarmerola.github.io/non-stationary-bandits)
-- **Traffic Flow Prediction**: [Research Article](https://www.sciencedirect.com/science/article/pii/S2210537922000725) 
-    
-- **(Deep) Reinforcement Learning**:
-    
-    - [OpenAI Spinning Up](https://spinningup.openai.com/en/latest/)
-    - [Stable Baselines](https://stable-baselines.readthedocs.io/en/master/)
-    - [Deep RL Course by Hugging Face](https://huggingface.co/deep-rl-course/unit1/rl-framework)
+## Possible Solutions
+* [Multi-armed bandit problem](https://en.wikipedia.org/wiki/Multi-armed_bandit)
+  - [Epsilon-greedy strategy](https://gdmarmerola.github.io/ts-for-bernoulli-bandit)
+  - [Thompson sampling](https://gdmarmerola.github.io/ts-for-bernoulli-bandit)
+  - [Upper Confidence Bound (UCB)](https://gdmarmerola.github.io/ts-for-bernoulli-bandit)
+  - [Non-stationary bandit](https://gdmarmerola.github.io/non-stationary-bandits)
+  
+* [Traffic flow prediction](https://www.sciencedirect.com/science/article/pii/S2210537922000725)</br>
+<img width="400" src="https://ars.els-cdn.com/content/image/1-s2.0-S2210537922000725-gr1_lrg.jpg" />
+
+* [(Deep) reinforcement learning](https://en.wikipedia.org/wiki/Deep_reinforcement_learning)
+  - https://spinningup.openai.com/en/latest/
+  - https://stable-baselines.readthedocs.io/en/master/
+  - https://huggingface.co/deep-rl-course/unit1/rl-framework
 
 ### Contributors
 
