@@ -1,50 +1,43 @@
-
-[<img width="256" src="https://www.seekpng.com/png/full/205-2051271_university-of-amsterdam-logo-university-of-amsterdam-logo.png" alt="University of Amsterdam Logo" />](https://www.uva.nl/en)
+[<img width="256" src="https://www.seekpng.com/png/full/205-2051271_university-of-amsterdam-logo-university-of-amsterdam-logo.png" />](https://www.uva.nl/en)
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-[<img src="https://mns-research.nl/images/logo_hua931301caa9e2c039e68fbb874deb22a_17897_0x70_resize_lanczos_2.png" alt="MNS Research Logo" />](https://mns-research.nl)
+[![](https://mns-research.nl/images/logo_hua931301caa9e2c039e68fbb874deb22a_17897_0x70_resize_lanczos_2.png)](https://mns-research.nl)
 
 # ROFARS-MNS
-## Resource Optimization for Facial Recognition Systems
+**Resource Optimization for Facial Recognition Systems**
 
-Facial recognition systems have become indispensable in various sectors like security, marketing, and healthcare. However, deploying them in real-time scenarios presents noteworthy computational challenges. This thesis delves deep into the capabilities and boundaries of machine learning algorithms, including UCB-1, SW-UCB, D-UCB, and LSTM, to enhance resource allocation and predict traffic flow for these systems.
+Facial recognition systems have found substantial applications in various industries, including security, marketing, and healthcare. Nevertheless, their real-time applications pose significant computational challenges. This thesis explores the strengths and limitations of different machine learning algorithms: UCB-1, SW-UCB, D-UCB, and LSTM in optimising resource allocation and traffic flow prediction for facial recognition systems. Through an empirical analysis, it was found that UCB-1, while computationally efficient and suitable for quick decision-making, falls short in non-stationary environments due to its assumption of stationary reward distributions and its inability to adapt to changing reward distributions. In contrast, the SW-UCB and D-UCB algorithms, although more computationally intensive, exhibited superior performance in dynamic environments due to their recency bias. 
 
-### Key Findings:
-- **UCB-1** is computationally efficient, ideal for quick decisions but struggles in non-stationary environments.
-- **SW-UCB** and **D-UCB** perform better in dynamic environments due to their recency bias, but their efficiency is contingent upon hyperparameter tuning.
-- **LSTM** excels in stationary or slowly changing situations but faces challenges during rapid transitions.
-- Data handling techniques, particularly imputation methods within the LSTM framework, can drastically affect outcomes.
+Nevertheless, their performance is strongly influenced by the tuning of their key hyperparameters. LSTM networks performed well in stationary or slowly changing environments, yet their performance was limited in non-stationary conditions due to inherent assumptions of stationarity and challenges in tracking rapid changes. The results also showed that the choice of data handling methods, specifically the imputation method within the LSTM framework, can significantly impact performance. In conclusion, the choice of an algorithm for real-world applications should consider the specific requirements and constraints of the situation. Future research directions include enhancing the performance of UCB-1 in non-stationary environments, improving hyperparameter tuning for SW-UCB and D-UCB, adapting LSTM for non-stationary conditions, and exploring alternative data handling techniques for dealing with missing or inconsistent data. This study serves as a stepping stone towards a more nuanced understanding of different machine learning algorithms, underlining the importance of adaptability, computational efficiency, and performance trade-offs.
 
-Conclusively, when selecting an algorithm for practical applications, it's vital to weigh the specific needs and constraints of the scenario. Future research can focus on improving these algorithms and exploring better data handling strategies.
+## System Diagram
+![Diagram illustrating the progression of data from multiple cameras via the predictive unit, culminating at the facial recognition system.](images/camera.png)
 
-### System Diagrams
-![Data progression from multiple cameras to the facial recognition system.](images/camera.png)
+Ths diagram illustrates the progression of data from multiple cameras via the predictive unit, culminating in the facial recognition system.
 
-The above diagram showcases the data flow from multiple cameras through the predictive unit, leading to the facial recognition system.
-
-![Interactions between agents and the environment.](images/agentscheme.png)
-
-### Code Structure & Environment
-- **rofarsEnv.py**: Simulation environment.
-- **agents.py**: Contains implementations for LSTM and UCB agents (Authored by Jasper Bruin).
-- **example.py**: Demonstrates the integration of all components.
-- **UCBtest.py**: Script for testing and training various UCB agents.
-- **RNNtest.py**: Script that employs historical traffic data from agents in `agents.py` for testing and training.
-
-### Dataset
-- `data/train_test.txt` (878,858 entries)
-
-### Dependencies
-The code is compatible with Python 3.7+. To set up the required environment:
-`pip install numpy==1.24.2 pandas==1.5.3 tqdm==4.64.1`
+## Python-based Environment
+![Diagram illustrating how the agents are connected to the environment and how they interact with statem reward and action](images/agentscheme.png)
 
 
-### Usage
+* rofarsEnv.py - simulation environment
+* agents.py - implementations for agents (LSTM and UCB agents by Jasper Bruin)
+* example.py - example of how everything is put together
+* UCBtest.py - testing and training script for the use of different UCB agents.
+* RNNtest.py - testing and training script that uses historical traffic data from existing agents in agents.py
 
-1. Extend `agents.py` with your algorithm implementations.
-2. Modify `example.py` to suit your experiments.
-3. Run `python example.py`
+## Dataset
+* data/train_test.txt (878,858 lines)
 
-
+## Dependencies
+* the code supports Python 3.7+
+```
+pip install numpy==1.24.2 pandas==1.5.3 tqdm==4.64.1
+```
+## Usage
+* add your algorithm implementations to `agents.py`
+* adapt `example.py` for use in experiments
+```
+python example.py
+```
 ## Possible Solutions
 * [Multi-armed bandit problem](https://en.wikipedia.org/wiki/Multi-armed_bandit)
   - [Epsilon-greedy strategy](https://gdmarmerola.github.io/ts-for-bernoulli-bandit)
@@ -60,18 +53,32 @@ The code is compatible with Python 3.7+. To set up the required environment:
   - https://stable-baselines.readthedocs.io/en/master/
   - https://huggingface.co/deep-rl-course/unit1/rl-framework
 
-### Contributors
+## Contributors
+* Jasper Bruin - Author of the LSTM and UCB agents 
 
-- Jasper Bruin: Authored LSTM and UCB agents.
+## Contact
+Cyril Hsu - s.h.hsu@uva.nl
 
-### Contact
+Dr. Chrysa Papagianni - c.papagianni@uva.nl
 
-- **Cyril Hsu**: [s.h.hsu@uva.nl](mailto:s.h.hsu@uva.nl)
-- **Dr. Chrysa Papagianni**: [c.papagianni@uva.nl](mailto:c.papagianni@uva.nl)
-- **Jasper Bruin**: [jasperbruin@me.com](mailto:jasperbruin@me.com)
+Jasper Bruin - jasperbruin@me.com
 
-### License
+## License 
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-This software adheres to the GNU GENERAL PUBLIC LICENSE (Version 3, 29 June 2007). It can be redistributed and/or modified under the conditions stated in the license. Read the full terms [here](https://www.gnu.org/licenses/).
+GNU GENERAL PUBLIC LICENSE  
+Version 3, 29 June 2007
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
